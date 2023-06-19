@@ -1,9 +1,11 @@
 import { Duration, Stack, StackProps } from 'aws-cdk-lib';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
+import * as path from 'path';
 
 export default class ServerlessDoomStack extends Stack {
   helloDoomLambda: NodejsFunction;
@@ -59,15 +61,48 @@ export default class ServerlessDoomStack extends Stack {
     doomBucket.grantReadWrite(this.s3DynamoDoomLambda);
     doomKeyDb.grantReadWriteData(this.s3DynamoDoomLambda);
 
+    const kvDoomLambdaEnv = {
+      DOOM_BUCKET_NAME: doomBucket.bucketName,
+      DOOM_PHOTO_KEY: 'doom-screenshot.png',
+    };
     this.kvDoomLambda = new NodejsFunction(this, 'KvDoomHandler', {
       entry: 'lib/lambda/kv-doom.ts',
       handler: 'handler',
       runtime: Runtime.NODEJS_18_X,
       timeout: Duration.seconds(30),
       memorySize: 1024 * 3,
+      environment: kvDoomLambdaEnv,
       bundling: {
-        nodeModules: ['@sparticuz/chromium'],
+        nodeModules: ['@sparticuz/chromium', 'vm2'],
+        commandHooks: {
+          beforeBundling(): string[] {
+            return [];
+          },
+          beforeInstall(): string[] {
+            return [];
+          },
+          afterBundling(inputDir: string, outputDir: string): string[] {
+            if (inputDir === '/asset-input') return [];
+            const localDist = path.join(inputDir, 'dist');
+            const bundleDist = path.join(outputDir, 'dist');
+            return [
+              `mkdir -p ${bundleDist}`,
+              `cp -r ${localDist} ${outputDir}`,
+            ];
+          },
+        },
       },
     });
+
+    const account = props?.env?.account;
+    this.kvDoomLambda.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['kinesisvideo:*'],
+      resources: [
+        `arn:aws:kinesisvideo:eu-west-1:${account || '*'}:channel/tom-test-channel/1685732429083`,
+      ],
+      effect: iam.Effect.ALLOW,
+      sid: 'KinesisVideoAccess',
+    }));
+    doomBucket.grantReadWrite(this.kvDoomLambda);
   }
 }

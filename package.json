@@ -5,7 +5,7 @@
     "serverless-doom": "bin/serverless-doom.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build:kv": "esbuild --bundle ./viewers/kv-dynamo-server.ts --outfile=./dist/kv-dynamo-server.js --define:process.env.PACKAGE_VERSION=1 --loader:.wasm=file && cp ./viewers/kv-doom-server.html ./dist",
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk",

@@ -85,10 +85,11 @@ async function puppetDoom({
   const browser = await puppeteer.launch({ headless: 'new' });
   const page = await browser.newPage();
   await page.goto(localDoomPage);
-  await page.setViewport({ width: 1080, height: 1024 });
+  page.on('console', (msg) => console.log('[page]', msg.text()));
   const canvasSelector = `#${canvasId}`;
   await page.waitForSelector(canvasSelector);
   await page.click(canvasSelector); // start doom!
+  await page.screenshot({ path: 'tmp/doom.png' });
   return browser;
 }
 

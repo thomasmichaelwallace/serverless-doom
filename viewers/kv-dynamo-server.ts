@@ -327,7 +327,7 @@ async function main() {
     sendVideo: true,
     sendAudio: false,
     natTraversalDisabled: false,
-    forceTURN: false,
+    forceTURN: true,
     useTrickleICE: false,
     // TODO: get these from the canvas
     width: Doom.DOOM_SCREEN_WIDTH,
