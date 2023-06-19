@@ -49,11 +49,11 @@ async function main() {
   const doomQuitButton = document.getElementById('doom-quit') as HTMLAnchorElement;
   doomQuitButton.onclick = async () => {
     const stream = await awaitStream;
-    // stream.signalingClient?.close();
     Object.entries(stream.peerConnectionByClientId).forEach(([i, pc]) => {
-      console.log('closing', i, pc.localDescription);
+      console.log('[kv-iot] closing', i, pc.localDescription);
       pc.close();
     });
+    stream.signalingClient?.close();
   };
 
   // keyboard
