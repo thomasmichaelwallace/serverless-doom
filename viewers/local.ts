@@ -2,10 +2,10 @@
 
 /* eslint-disable no-console */
 import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import Doom, { KeyCodes, KeyEvent } from '../lib/common/doom';
+import Doom from '../lib/common/doom';
 import { fromSaveCode, getSaveCode } from '../lib/common/payload';
 import toDoomKey from '../lib/common/toDoomKey';
-import { DoomWindow } from '../lib/common/types';
+import { DoomWindow, KeyEvent } from '../lib/common/types';
 import context from '../tmp/context.json';
 import jsonCredentials from '../tmp/credentials.json';
 // @ts-expect-error doomWasm is a string
@@ -122,11 +122,10 @@ async function main() {
     const key = toDoomKey(event, type);
     if (!key) return;
 
-    const code = KeyCodes[key.keyCode];
     if (key.event === KeyEvent.KeyDown) {
-      doom.sendKeyDown(code);
+      doom.sendKeyDown(key.keyCode);
     } else {
-      doom.sendKeyUp(code);
+      doom.sendKeyUp(key.keyCode);
     }
   };
 

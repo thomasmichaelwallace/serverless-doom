@@ -1,6 +1,7 @@
 /* eslint-disable */
 
-// this file is causing a lot of issues because CompressionStream and
+// typescript and eslint ignore everything in this file:
+// It is causing a lot of issues because CompressionStream and
 // DecompressionStream are not defined in the typescript lib.
 
 const uint8ToBase64 = (arr: Uint8Array): string => btoa(

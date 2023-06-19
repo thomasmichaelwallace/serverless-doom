@@ -1,9 +1,8 @@
 /* eslint-disable no-console */
-import { KeyEvent } from '../lib/common/doom';
 import IotClient from '../lib/common/iotClient';
 import startViewer from '../lib/common/kvsViewer';
 import toDoomKey from '../lib/common/toDoomKey';
-import { DoomKey } from '../lib/common/types';
+import { DoomKey, KeyEvent } from '../lib/common/types';
 import context from '../tmp/context.json';
 import jsonCredentials from '../tmp/credentials.json';
 

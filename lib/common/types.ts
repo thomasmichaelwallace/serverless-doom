@@ -1,5 +1,3 @@
-import type { KeyCodes, KeyEvent } from './doom';
-
 export type AwsCredentials = {
   accessKeyId: string,
   secretAccessKey: string,
@@ -14,10 +12,15 @@ export type CliTmpCredentials = {
   }
 };
 
+export enum KeyEvent {
+  KeyDown = 0,
+  KeyUp = 1,
+}
+
 export type DoomKey = {
   ts: number,
   event: KeyEvent,
-  keyCode: keyof typeof KeyCodes,
+  keyCode: number,
 };
 
 export type DoomWindow = {

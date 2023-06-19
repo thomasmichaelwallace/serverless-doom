@@ -1,10 +1,11 @@
 /* eslint-disable no-console */
-import Doom, { KeyCodes, KeyEvent } from '../lib/common/doom';
+import Doom from '../lib/common/doom';
 import IotClient from '../lib/common/iotClient';
 import startMaster from '../lib/common/kvsMaster';
 import { fromSaveCode, getSaveCode } from '../lib/common/payload';
-import type {
-  AwsCredentials, CliTmpCredentials, DoomKey, DoomWindow,
+import {
+  KeyEvent,
+  type AwsCredentials, type CliTmpCredentials, type DoomKey, type DoomWindow,
 } from '../lib/common/types';
 import context from '../tmp/context.json';
 // @ts-expect-error doomWasm is a string
@@ -92,11 +93,10 @@ async function main() {
   });
   // eslint-disable-next-line @typescript-eslint/require-await
   iot.onMessage = async (k) => {
-    const key = KeyCodes[k.keyCode];
     if (k.event === KeyEvent.KeyDown) {
-      doom.sendKeyDown(key);
+      doom.sendKeyDown(k.keyCode);
     } else {
-      doom.sendKeyUp(key);
+      doom.sendKeyUp(k.keyCode);
     }
   };
 
@@ -104,39 +104,11 @@ async function main() {
 
   const dumpGameButton = document.getElementById('doom-dump') as HTMLAnchorElement;
   dumpGameButton.onclick = () => {
-    // console.log('dump button clicked');
-    // // await awaitDoom;
-    // console.log('dumping...');
-    // const dump = new Uint8Array(doom.memory.buffer, 0, doom.memory.buffer.byteLength);
-    // console.log('dumping!');
-    // const code = await getSaveCode(dump);
-    // console.log('saving...');
-    // console.log('-- saveCode > --');
-    // // console.log(code);
-    // (window as unknown as DoomWindow).savedState = code;
-    // console.log('-- < saveCode --');
     PENDING_DUMP = true;
   };
 
   const recoverGameButton = document.getElementById('doom-recover') as HTMLAnchorElement;
   recoverGameButton.onclick = () => {
-    // await awaitDoom;
-    // const saveCode = (window as unknown DoomWindow).savedState;
-    // if (saveCode === undefined) {
-    //   console.warn('window.saveKey must be set');
-    //   return;
-    // }
-    // const dump = await fromSaveCode(saveCode);
-    // if (doom.memory.buffer.byteLength < dump.length) {
-    //   console.warn('doom.memory.buffer is too small');
-    //   const delta = (dump.length - doom.memory.buffer.byteLength) / 65536; // in 64k pages
-    //   console.log('growing doom.memory.buffer by', delta, 'pages');
-    //   doom.memory.grow(Math.ceil(delta));
-    // }
-
-    // const memory = new Uint8Array(doom.memory.buffer, 0, dump.length);
-    // memory.set(dump);
-    // console.log('recovered', dump.length);
     PENDING_RESTORE = true;
   };
 

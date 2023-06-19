@@ -3,8 +3,8 @@ import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3
 import { DeleteCommand, DynamoDBDocumentClient, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { Handler } from 'aws-lambda';
 import Jimp from 'jimp';
-import Doom, { KeyCodes, KeyEvent } from '../common/doom';
-import type { DoomKey } from '../common/types';
+import Doom from '../common/doom';
+import { KeyEvent, type DoomKey } from '../common/types';
 
 const s3 = new S3Client({});
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -66,11 +66,10 @@ export const handler : Handler = async (_, context) => {
   doom.onStep = async () => {
     const keys = await getKeys();
     keys.forEach((k) => {
-      const key = KeyCodes[k.keyCode];
       if (k.event === KeyEvent.KeyDown) {
-        doom.sendKeyDown(key);
+        doom.sendKeyDown(k.keyCode);
       } else {
-        doom.sendKeyUp(key);
+        doom.sendKeyUp(k.keyCode);
       }
     });
     const png = await doom.screen.getBufferAsync('image/png');

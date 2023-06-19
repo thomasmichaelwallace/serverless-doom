@@ -3,8 +3,8 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { Credentials } from 'aws-lambda';
-import { KeyEvent } from '../lib/common/doom';
 import toDoomKey from '../lib/common/toDoomKey';
+import { KeyEvent } from '../lib/common/types';
 import context from '../tmp/context.json';
 import jsonCredentials from '../tmp/credentials.json';
 
