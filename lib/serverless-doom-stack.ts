@@ -9,22 +9,12 @@ import * as path from 'path';
 import context from '../tmp/context.json';
 
 export default class ServerlessDoomStack extends Stack {
-  helloDoomLambda: NodejsFunction;
-
   s3DynamoDoomLambda: NodejsFunction;
-
-  kvDynamoDoomLambda: NodejsFunction;
 
   kvIotDoomLambda: NodejsFunction;
 
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
-
-    this.helloDoomLambda = new NodejsFunction(this, 'HelloDoomHandler', {
-      entry: 'lib/lambda/hello-doom.ts',
-      handler: 'handler',
-      runtime: Runtime.NODEJS_18_X,
-    });
 
     const doomBucket = new s3.Bucket(this, 'DoomBucket', {
       cors: [
@@ -62,41 +52,6 @@ export default class ServerlessDoomStack extends Stack {
     });
     doomBucket.grantReadWrite(this.s3DynamoDoomLambda);
     doomKeyDb.grantReadWriteData(this.s3DynamoDoomLambda);
-
-    this.kvDynamoDoomLambda = new NodejsFunction(this, 'KvDynamoDoomHandler', {
-      entry: 'lib/lambda/kv-dynamo-doom.ts',
-      handler: 'handler',
-      runtime: Runtime.NODEJS_18_X,
-      timeout: Duration.minutes(1),
-      memorySize: 1024 * 3,
-      bundling: {
-        nodeModules: ['@sparticuz/chromium', 'vm2'],
-        commandHooks: {
-          beforeBundling(): string[] {
-            return ['npm run build:kv-dynamo']; // rebuild dist
-          },
-          beforeInstall(): string[] {
-            return [];
-          },
-          afterBundling(inputDir: string, outputDir: string): string[] {
-            if (inputDir === '/asset-input') return [];
-            const localDist = path.join(inputDir, 'dist');
-            const bundleDist = path.join(outputDir, 'dist');
-            return [
-              `mkdir -p ${bundleDist}`,
-              `cp -r ${localDist} ${outputDir}`,
-            ];
-          },
-        },
-      },
-    });
-    this.kvDynamoDoomLambda.addToRolePolicy(new iam.PolicyStatement({
-      actions: ['kinesisvideo:*'],
-      resources: [context.kinesisChannelArn],
-      effect: iam.Effect.ALLOW,
-      sid: 'KinesisVideoAccess',
-    }));
-    doomKeyDb.grantReadWriteData(this.kvDynamoDoomLambda);
 
     this.kvIotDoomLambda = new NodejsFunction(this, 'kvIotDoomHandler', {
       entry: 'lib/lambda/kv-iot-doom.ts',
@@ -148,6 +103,5 @@ export default class ServerlessDoomStack extends Stack {
       sid: 'LambdaAccess',
     }));
     doomBucket.grantReadWrite(this.kvIotDoomLambda);
-    // this.kvIotDoomLambda.grantInvoke(this.kvIotDoomLambda);
   }
 }
