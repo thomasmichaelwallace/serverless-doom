@@ -4,12 +4,12 @@ import * as subs from 'aws-cdk-lib/aws-sns-subscriptions';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { Construct } from 'constructs';
 
-export class ServerlessDoomStack extends Stack {
+export default class ServerlessDoomStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
     const queue = new sqs.Queue(this, 'ServerlessDoomQueue', {
-      visibilityTimeout: Duration.seconds(300)
+      visibilityTimeout: Duration.seconds(300),
     });
 
     const topic = new sns.Topic(this, 'ServerlessDoomTopic');
