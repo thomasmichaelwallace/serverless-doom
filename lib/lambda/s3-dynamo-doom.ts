@@ -1,6 +1,5 @@
 import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { Handler } from 'aws-lambda';
-import { PNGStream } from 'canvas';
 import Doom from './doom';
 
 const s3 = new S3Client({});
@@ -14,7 +13,7 @@ async function getDoomWasm() {
   return data.Body?.transformToByteArray();
 }
 
-async function saveDoomFrame(data: PNGStream) {
+async function saveDoomFrame(data: Buffer) {
   const command = new PutObjectCommand({
     Bucket: process.env.DOOM_BUCKET_NAME,
     Key: process.env.DOOM_FRAME_KEY,
@@ -32,7 +31,7 @@ export const handler : Handler = async () => {
   const awaitable = doom.start(wasm);
 
   doom.onStep = async () => {
-    const png = doom.canvas.createPNGStream();
+    const png = await doom.screen.getBufferAsync('image/png');
     await saveDoomFrame(png);
   };
 

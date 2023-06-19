@@ -30,9 +30,6 @@ export default class ServerlessDoomStack extends Stack {
       handler: 'handler',
       runtime: Runtime.NODEJS_18_X,
       environment: s3DynamoDoomLambdaEnv,
-      bundling: {
-        nodeModules: ['canvas'],
-      },
       timeout: Duration.seconds(30),
       memorySize: 1024,
     });
