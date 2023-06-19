@@ -6,6 +6,14 @@ export type AwsCredentials = {
   sessionToken?: string,
 };
 
+export type CliTmpCredentials = {
+  Credentials: {
+    AccessKeyId: string,
+    SecretAccessKey: string,
+    SessionToken?: string,
+  }
+};
+
 export type DoomKey = {
   ts: number,
   event: KeyEvent,

@@ -6,6 +6,7 @@ import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
 import * as path from 'path';
+import context from '../tmp/context.json';
 
 export default class ServerlessDoomStack extends Stack {
   helloDoomLambda: NodejsFunction;
@@ -94,12 +95,9 @@ export default class ServerlessDoomStack extends Stack {
       },
     });
 
-    const account = props?.env?.account;
     this.kvDoomLambda.addToRolePolicy(new iam.PolicyStatement({
       actions: ['kinesisvideo:*'],
-      resources: [
-        `arn:aws:kinesisvideo:eu-west-1:${account || '*'}:channel/tom-test-channel/1685732429083`,
-      ],
+      resources: [context.kinesisChannelArn],
       effect: iam.Effect.ALLOW,
       sid: 'KinesisVideoAccess',
     }));

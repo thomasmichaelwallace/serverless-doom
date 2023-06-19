@@ -2,11 +2,11 @@
 import fs from 'fs';
 import http from 'http';
 import path from 'path';
-import type { AwsCredentials } from './types';
+import type { CliTmpCredentials } from './types';
 
 type LocalServerOptions = {
   serveDir: string;
-  jsonCredentials: AwsCredentials;
+  jsonCredentials: CliTmpCredentials;
 };
 
 export default async function localFileServer({

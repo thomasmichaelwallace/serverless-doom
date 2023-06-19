@@ -3,13 +3,19 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { KeyCodes, KeyEvent } from '../lib/common/doom';
 import startViewer from '../lib/common/kvsViewer';
+import context from '../tmp/context.json';
 import jsonCredentials from '../tmp/credentials.json';
 
 const remoteView = document.getElementById('remote-view') as HTMLVideoElement;
 
-const DOOM_KEY_DB_TABLE_NAME = 'ServerlessDoomStack-DoomKeyDbED051C17-P00PEGLDRZJU';
+const DOOM_KEY_DB_TABLE_NAME = context.doomKeyDbTableName;
 
-const config = { region: 'eu-west-1', credentials: jsonCredentials };
+const credentials = {
+  accessKeyId: jsonCredentials.Credentials.AccessKeyId,
+  secretAccessKey: jsonCredentials.Credentials.SecretAccessKey,
+  sessionToken: jsonCredentials.Credentials.SessionToken,
+};
+const config = { region: 'eu-west-1', credentials };
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient(config));
 
 function handleKey(event: KeyboardEvent, type: KeyEvent) {
@@ -44,8 +50,8 @@ function handleKey(event: KeyboardEvent, type: KeyEvent) {
 
 async function main() {
   await startViewer({
-    ...jsonCredentials,
-    channelName: 'tom-test-channel',
+    ...credentials,
+    channelName: context.kinesisChannelName,
     remoteView,
     clientId: `doom-client-${Math.floor(Math.random() * 1000)}`,
     natTraversalDisabled: false,

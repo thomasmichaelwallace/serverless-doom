@@ -3,13 +3,16 @@ import chromium from '@sparticuz/chromium';
 import { Handler } from 'aws-lambda';
 import puppeteer from 'puppeteer-core';
 import localFileServer from '../common/localFileServer';
+import { CliTmpCredentials } from '../common/types';
 
 const delay = (ms: number) => new Promise((resolve) => { setTimeout(resolve, ms); });
 
-const JSON_CREDENTIALS = {
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'AWS_ACCESS_KEY_ID',
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'AWS_SECRET_ACCESS_KEY',
-  sessionToken: process.env.AWS_SESSION_TOKEN,
+const JSON_CREDENTIALS: CliTmpCredentials = {
+  Credentials: {
+    AccessKeyId: process.env.AWS_ACCESS_KEY_ID || 'AWS_ACCESS_KEY_ID',
+    SecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'AWS_SECRET_ACCESS_KEY',
+    SessionToken: process.env.AWS_SESSION_TOKEN,
+  },
 };
 const SERVER_BASE = './dist';
 

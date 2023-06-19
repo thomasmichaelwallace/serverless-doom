@@ -5,6 +5,7 @@ import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { Credentials } from 'aws-lambda';
 import { KeyCodes, KeyEvent } from '../lib/common/doom';
+import context from '../tmp/context.json';
 import jsonCredentials from '../tmp/credentials.json';
 
 const delay = (ms: number) => new Promise((resolve) => { setTimeout(resolve, ms); });
@@ -114,9 +115,13 @@ class DoomClient {
 
 function main() {
   const client = new DoomClient({
-    credentials: jsonCredentials as Credentials,
-    bucketName: 'serverlessdoomstack-doombucketb92c69dd-bzw4jpsnuvs2',
-    tableName: 'ServerlessDoomStack-DoomKeyDbED051C17-P00PEGLDRZJU',
+    credentials: {
+      accessKeyId: jsonCredentials.Credentials.AccessKeyId,
+      secretAccessKey: jsonCredentials.Credentials.SecretAccessKey,
+      sessionToken: jsonCredentials.Credentials.SessionToken,
+    },
+    bucketName: context.doomBucketName,
+    tableName: context.doomKeyDbTableName,
     img: document.getElementById('doom-frame') as HTMLImageElement,
   });
   // eslint-disable-next-line no-console

@@ -28,7 +28,13 @@ async function main() {
   console.log('[chrome] spawning puppeteer');
   const url = await localFileServer({
     serveDir: SERVER_BASE,
-    jsonCredentials,
+    jsonCredentials: {
+      Credentials: {
+        AccessKeyId: jsonCredentials.Credentials.AccessKeyId,
+        SecretAccessKey: jsonCredentials.Credentials.SecretAccessKey,
+        SessionToken: jsonCredentials.Credentials.SessionToken,
+      },
+    },
   });
   const localDoomPage = `${url}/kv-doom-server.html`;
   console.log('[chrome] url', localDoomPage);
