@@ -1,13 +1,11 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { DeleteCommand, DynamoDBDocumentClient, ScanCommand } from '@aws-sdk/lib-dynamodb';
-import type { JimpConstructors, Jimp as JimpType } from '@jimp/core';
 import { Handler } from 'aws-lambda';
-import 'jimp';
+import Jimp from 'jimp';
 import Doom, { KeyCodes, KeyEvent } from '../common/doom';
 import type { DoomKey } from '../common/types';
 
-const { Jimp } = window as unknown as { Jimp: JimpType & JimpConstructors };
 const s3 = new S3Client({});
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
