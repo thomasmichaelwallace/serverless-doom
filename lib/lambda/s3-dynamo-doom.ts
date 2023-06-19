@@ -5,18 +5,13 @@ import type { JimpConstructors, Jimp as JimpType } from '@jimp/core';
 import { Handler } from 'aws-lambda';
 import 'jimp';
 import Doom, { KeyCodes, KeyEvent } from '../common/doom';
+import type { DoomKey } from '../common/types';
 
 const { Jimp } = window as unknown as { Jimp: JimpType & JimpConstructors };
 const s3 = new S3Client({});
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
 const delay = (ms: number) => new Promise((resolve) => { setTimeout(resolve, ms); });
-
-type DoomKey = {
-  ts: number,
-  event: KeyEvent,
-  keyCode: keyof typeof KeyCodes,
-};
 
 async function getDoomWasm() {
   const command = new GetObjectCommand({

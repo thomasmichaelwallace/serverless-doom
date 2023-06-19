@@ -104,5 +104,6 @@ export default class ServerlessDoomStack extends Stack {
       sid: 'KinesisVideoAccess',
     }));
     doomBucket.grantReadWrite(this.kvDoomLambda);
+    doomKeyDb.grantReadWriteData(this.kvDoomLambda);
   }
 }
