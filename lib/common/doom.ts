@@ -9,7 +9,7 @@ type DoomExports = {
 
 const delay = (ms: number) => new Promise((resolve) => { setTimeout(resolve, ms); });
 
-export default class Doom<T> {
+export default class Doom {
   static DOOM_SCREEN_HEIGHT = 200 * 2;
 
   static DOOM_SCREEN_WIDTH = 320 * 2;
@@ -26,15 +26,12 @@ export default class Doom<T> {
 
   onStep: () => Promise<void>;
 
-  screen: T;
-
   updateScreen: (img: Uint8ClampedArray) => void;
 
   private startAwaitable: Promise<void> | undefined = undefined;
 
-  constructor(screen: T) {
+  constructor() {
     this.memory = new WebAssembly.Memory({ initial: 108 });
-    this.screen = screen;
     this.onStep = async () => {};
     this.sendKeyDown = () => {};
     this.sendKeyUp = () => {};
@@ -45,7 +42,7 @@ export default class Doom<T> {
     return new TextDecoder('utf8').decode(bytes);
   }
 
-  private log(style: string) {
+  private buildLogger(style: string) {
     return (offset: number, length: number) => {
       const lines = this.readWasmString(offset, length).split('\n');
       lines.forEach((l) => { console.log(`[doom-${style}] ${l}`); });
@@ -71,9 +68,9 @@ export default class Doom<T> {
 
     const importObject = {
       js: {
-        js_console_log: this.log('js'),
-        js_stdout: this.log('stdout'),
-        js_stderr: this.log('stderr'),
+        js_console_log: this.buildLogger('js'),
+        js_stdout: this.buildLogger('stdout'),
+        js_stderr: this.buildLogger('stderr'),
         js_milliseconds_since_start: () => this.baseTime + performance.now(),
         js_draw_screen: (ptr: number) => this.draw(ptr),
       },

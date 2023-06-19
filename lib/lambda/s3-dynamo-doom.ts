@@ -46,10 +46,10 @@ export const handler : Handler = async (_, context) => {
   const wasm = await getDoomWasm();
   if (!wasm) return { statusCode: 500, body: 'Failed to load Doom' };
 
-  const screen = new Jimp(Doom.DOOM_SCREEN_WIDTH, Doom.DOOM_SCREEN_HEIGHT);
-  const doom = new Doom(screen);
+  let screen = new Jimp(Doom.DOOM_SCREEN_WIDTH, Doom.DOOM_SCREEN_HEIGHT);
+  const doom = new Doom();
   doom.updateScreen = (data) => {
-    doom.screen = new Jimp({
+    screen = new Jimp({
       data,
       width: Doom.DOOM_SCREEN_WIDTH,
       height: Doom.DOOM_SCREEN_HEIGHT,
@@ -72,7 +72,7 @@ export const handler : Handler = async (_, context) => {
         doom.sendKeyUp(k.keyCode);
       }
     });
-    const png = await doom.screen.getBufferAsync('image/png');
+    const png = await screen.getBufferAsync('image/png');
     await saveDoomFrame(png);
   };
 

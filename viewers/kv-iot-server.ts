@@ -19,7 +19,7 @@ async function main() {
   const canvas = document.getElementById('doom-frame') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 
-  const doom = new Doom(ctx);
+  const doom = new Doom();
   doom.updateScreen = (img) => {
     const data = new ImageData(
       img,
