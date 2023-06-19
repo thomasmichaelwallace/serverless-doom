@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>KV iot Image Display</title>
+  <script async=false type="module" src="kv-iot.js"></script>
+</head>
+  <body>
+    <video id="remote-view" autoplay playsinline muted></video>
+  </body>
+  <script>
+    // fix aws-sdk:
+    (window).global = window;
+  </script>
+</html>
