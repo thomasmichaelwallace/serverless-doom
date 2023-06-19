@@ -5,11 +5,10 @@ import { Handler } from 'aws-lambda';
 import Jimp from 'jimp';
 import Doom from '../common/doom';
 import { KeyEvent, type DoomKey } from '../common/types';
+import { delay } from '../common/utils';
 
-const s3 = new S3Client({});
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
-
-const delay = (ms: number) => new Promise((resolve) => { setTimeout(resolve, ms); });
+const s3 = new S3Client({});
 
 async function getDoomWasm() {
   const command = new GetObjectCommand({
@@ -82,7 +81,7 @@ export const handler : Handler = async (_, context) => {
 
   await Promise.race([
     doom.start(wasm),
-    delay(timeToPlay),
+    delay(timeToPlay).then(() => doom.stop()),
   ]);
 
   return { statusCode: 200, body: 'Doomed' };

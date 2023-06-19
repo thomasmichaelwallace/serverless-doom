@@ -77,32 +77,6 @@ export default class Doom {
     this.sendDoomKey(KeyEvent.KeyUp, keyCode);
   }
 
-  private async doLoadState() {
-    if (this.nextLoadState === undefined) return;
-    const { snapshot, timestamp } = this.nextLoadState;
-    this.nextLoadState = undefined;
-    const buffer = await fromSaveCode(snapshot);
-    if (this.memory.buffer.byteLength < buffer.length) {
-      const delta = (buffer.length - this.memory.buffer.byteLength) / 65536; // in 64k pages
-      console.log('[doom] growing doom.memory.buffer by', delta, 'pages');
-      this.memory.grow(Math.ceil(delta));
-    }
-    const pointer = new Uint8Array(this.memory.buffer, 0, buffer.length);
-    pointer.set(buffer);
-    this.baseTime = timestamp;
-    console.log('[doom] loaded state', buffer.length, snapshot.length, timestamp);
-  }
-
-  private async doSaveState() {
-    this.nextSaveState = false;
-    const buffer = new Uint8Array(this.memory.buffer, 0, this.memory.buffer.byteLength);
-    const snapshot = await getSaveCode(buffer);
-    const timestamp = performance.now();
-    const state = { snapshot, timestamp };
-    console.log('[doom] saved state', buffer.length, snapshot.length, timestamp);
-    await this.onSaveState(state);
-  }
-
   async start(
     doomWasm: BufferSource,
   ) {
@@ -116,11 +90,7 @@ export default class Doom {
         js_console_log: this.buildLogger('js'),
         js_stdout: this.buildLogger('stdout'),
         js_stderr: this.buildLogger('stderr'),
-        js_milliseconds_since_start: () => {
-          const time = this.baseTime + performance.now();
-          console.log('[doom] js_milliseconds_since_start', time);
-          return time;
-        },
+        js_milliseconds_since_start: () => this.baseTime + performance.now(),
         js_draw_screen: (ptr: number) => this.draw(ptr),
       },
       env: { memory: this.memory },
@@ -180,6 +150,32 @@ export default class Doom {
       const lines = this.readWasmString(offset, length).split('\n');
       lines.forEach((l) => { console.log(`[doom-${style}] ${l}`); });
     };
+  }
+
+  private async doLoadState() {
+    if (this.nextLoadState === undefined) return;
+    const { snapshot, timestamp } = this.nextLoadState;
+    this.nextLoadState = undefined;
+    const buffer = await fromSaveCode(snapshot);
+    if (this.memory.buffer.byteLength < buffer.length) {
+      const delta = (buffer.length - this.memory.buffer.byteLength) / 65536; // in 64k pages
+      console.log('[doom] growing doom.memory.buffer by', delta, 'pages');
+      this.memory.grow(Math.ceil(delta));
+    }
+    const pointer = new Uint8Array(this.memory.buffer, 0, buffer.length);
+    pointer.set(buffer);
+    this.baseTime = timestamp;
+    console.log('[doom] loaded state', buffer.length, snapshot.length, timestamp);
+  }
+
+  private async doSaveState() {
+    this.nextSaveState = false;
+    const buffer = new Uint8Array(this.memory.buffer, 0, this.memory.buffer.byteLength);
+    const snapshot = await getSaveCode(buffer);
+    const timestamp = this.baseTime + performance.now();
+    const state = { snapshot, timestamp };
+    console.log('[doom] saved state', timestamp, buffer.length, snapshot.length);
+    await this.onSaveState(state);
   }
 
   private draw(ptr: number) {

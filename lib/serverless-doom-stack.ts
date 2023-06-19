@@ -60,6 +60,8 @@ export default class ServerlessDoomStack extends Stack {
       timeout: Duration.seconds(30),
       environment: {
         DOOM_BUCKET_NAME: doomBucket.bucketName,
+        DOOM_MAX_PLAYS: '3',
+        DOOM_STATE_KEY_PREFIX: 'doom-state-key',
       },
       // timeout: Duration.minutes(1),
       memorySize: 1024 * 3,

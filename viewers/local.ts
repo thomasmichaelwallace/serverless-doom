@@ -25,7 +25,7 @@ async function main() {
   // start doom
   const doom = new Doom();
   const doomWasm = await fetch(doomWasmName as string).then((r) => r.arrayBuffer());
-  await doom.start(doomWasm as BufferSource);
+  const awaitDoom = doom.start(doomWasm as BufferSource);
 
   // screen
   doom.updateScreen = (img) => {
@@ -102,5 +102,7 @@ async function main() {
     DUMP_TO_S3 = true;
     doom.requestSaveState();
   };
+
+  await awaitDoom;
 }
 main().catch((e) => { console.error(e); });

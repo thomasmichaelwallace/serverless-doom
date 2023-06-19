@@ -5,10 +5,9 @@ import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { Credentials } from 'aws-lambda';
 import toDoomKey from '../lib/common/toDoomKey';
 import { KeyEvent } from '../lib/common/types';
+import { delay } from '../lib/common/utils';
 import context from '../tmp/context.json';
 import jsonCredentials from '../tmp/credentials.json';
-
-const delay = (ms: number) => new Promise((resolve) => { setTimeout(resolve, ms); });
 
 type DoomClientOptions = {
   bucketName: string;

@@ -5,40 +5,30 @@ import chromium from '@sparticuz/chromium';
 import { Handler } from 'aws-lambda';
 import puppeteer, { Page } from 'puppeteer-core';
 import localFileServer from '../common/localFileServer';
-import { CliTmpCredentials, DoomWindow } from '../common/types';
-
-const MAX_PLAYS = 3;
+import { CliTmpCredentials, DoomState, DoomWindow } from '../common/types';
+import { delay } from '../common/utils';
 
 const lambda = new LambdaClient({});
 const s3 = new S3Client({});
 
-const delay = (ms: number) => new Promise((resolve) => { setTimeout(resolve, ms); });
-
-type LambdaEvent = {
+type KvIotDoomEvent = {
   plays?: number;
   stateKey?: string;
 };
 
-const JSON_CREDENTIALS: CliTmpCredentials = {
-  Credentials: {
-    AccessKeyId: process.env.AWS_ACCESS_KEY_ID || 'AWS_ACCESS_KEY_ID',
-    SecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'AWS_SECRET_ACCESS_KEY',
-    SessionToken: process.env.AWS_SESSION_TOKEN,
-  },
-};
-const SERVER_BASE = './dist';
+// puppeteer
 
 type PuppetDoomOptions = {
   localDoomPage: string;
   canvasId: string;
-  saveCode?: string,
+  savedState?: DoomState,
 };
-
-async function puppetDoom({
+async function startPuppetDoom({
   localDoomPage,
   canvasId,
-  saveCode,
+  savedState,
 }: PuppetDoomOptions) {
+  // start chrome
   console.log('[chrome] puppetDoom', 'getting chrome');
   const executablePath = await chromium.executablePath();
   console.log('[chrome] puppetDoom', executablePath);
@@ -50,82 +40,75 @@ async function puppetDoom({
     ignoreHTTPSErrors: true,
   });
   console.log('[chrome] puppetDoom', 'got chrome');
+
+  // load doom worker
   const page = await browser.newPage();
   await page.goto(localDoomPage);
-  page.on('console', (msg) => console.log('[page]', msg.text()));
   await page.setViewport({ width: 1080, height: 1024 });
   const canvasSelector = `#${canvasId}`;
   await page.waitForSelector(canvasSelector);
-  if (saveCode) {
+
+  // log console
+  page.on('console', (msg) => console.log('[page]', msg.text()));
+
+  // restore state
+  if (savedState) {
     console.log('[chrome] setting saveCode');
     await page.evaluate(
-      (code) => {
-        console.log('[chrome] setting window.saveCode');
-        (window as unknown as DoomWindow).savedState = code;
-        console.log('[chrome] set window.saveCode', code.length);
+      (s) => {
+        console.log('[chrome] setting window.savedState');
+        (window as unknown as DoomWindow).savedState = s;
+        console.log('[chrome] set window.savedState', s.timestamp, s.snapshot.length);
       },
-      saveCode,
+      savedState,
     );
     console.log('[chrome] waiting for restore');
     const restore = await page.waitForSelector('#doom-recover');
     console.log('[chrome] clicking restore');
     await restore?.click();
   }
-  await page.click(canvasSelector); // start doom!
+
+  await page.click(canvasSelector); // (ensure doom keeps focus)
   return page;
 }
 
-async function checkPoint(page: Page): Promise<string | false> {
+async function stopPuppetDoom(page: Page): Promise<string | false> {
+  // request state save
   console.log('[chrome] checkPoint', 'checking point');
   const dump = await page.waitForSelector('#doom-dump');
   console.log('[chrome] clicking!', dump);
   await dump?.click();
   await delay(1000); // pending; give loop a chance!
   console.log('[chrome] delay.!');
-  const saveCode = await page.evaluate(() => {
+  const savedState = await page.evaluate(() => {
     console.log('[chrome] getting window');
-    const savecode = (window as unknown as DoomWindow).savedState;
-    return savecode || '';
+    return (window as unknown as DoomWindow).savedState;
   });
-  console.log('[chrome] got saveCode', saveCode.length);
+
+  // persist state to s3
   let stateKey: string | false = false;
-  if (saveCode.length > 0) {
+  if (savedState) {
+    console.log('[chrome] got window.savedState', savedState.timestamp, savedState.snapshot.length);
+    stateKey = process.env.DOOM_STATE_KEY_PREFIX || 'doom-state-key';
     console.log('[chrome] saving to s3');
-    stateKey = 'doom-state-key';
     const command = new PutObjectCommand({
       Bucket: process.env.DOOM_BUCKET_NAME,
       Key: stateKey,
-      Body: saveCode,
+      Body: JSON.stringify(savedState),
     });
     await s3.send(command);
   }
+
+  // close channels and browser
   await page.click('#doom-quit');
-  console.log('[chrome] quit');
-  page.browser().process()?.kill();
-  console.log('[chrome] close.!');
+  console.log('[chrome] quit streams');
+  page.browser().process()?.kill(); // force quit required due to chrome bug
+  console.log('[chrome] processed killed');
   return stateKey;
 }
 
-async function startNext(options: {
-  functionName: string,
-  plays: number,
-  stateKey?: string,
-}) {
-  console.log('[chrome] startNext');
-  const event: LambdaEvent = {
-    plays: options.plays + 1,
-    stateKey: options.stateKey,
-  };
-  const command = new InvokeCommand({
-    FunctionName: options.functionName,
-    InvocationType: InvocationType.Event,
-    Payload: Buffer.from(JSON.stringify(event)),
-  });
-  console.log('[chrome] startNext', 'invoking', options.functionName);
-  await lambda.send(command);
-}
-
-async function getState(event: LambdaEvent): Promise<string | undefined> {
+// aws interface (s3 + lambda)
+async function getState(event: KvIotDoomEvent): Promise<DoomState | undefined> {
   console.log('[chrome] getState', event);
   if (!event.stateKey) {
     console.log('[chrome] getState', 'no stateKey');
@@ -138,48 +121,89 @@ async function getState(event: LambdaEvent): Promise<string | undefined> {
   console.log('[chrome] getState', 'getting state');
   const response = await s3.send(command);
   console.log('[chrome] getState', 'got state');
-  return response.Body?.transformToString();
+  const json = await response.Body?.transformToString();
+  if (!json) return undefined;
+  return JSON.parse(json) as DoomState;
+}
+
+async function invokeNextPlay(options: {
+  functionName: string,
+  plays?: number,
+  stateKey?: string,
+}) {
+  console.log('[chrome] invoke next');
+  const event: KvIotDoomEvent = {
+    plays: (options.plays || 0) + 1,
+    stateKey: options.stateKey,
+  };
+  const command = new InvokeCommand({
+    FunctionName: options.functionName,
+    InvocationType: InvocationType.Event,
+    Payload: Buffer.from(JSON.stringify(event)),
+  });
+  console.log('[chrome] invoking', options.functionName, event);
+  await lambda.send(command);
 }
 
 // eslint-disable-next-line import/prefer-default-export
-export const handler : Handler = async (event: LambdaEvent, context) => {
-  console.log('[chrome] handler', event);
-  if (event?.plays && event.plays > MAX_PLAYS) {
-    console.log('[chrome] max plays reached');
+export const handler : Handler = async (event: KvIotDoomEvent, context) => {
+  console.log('[lambda] handler', event);
+
+  // prevent infinite loop
+  let maxPlays = 3;
+  const maxPlaysEnv = Number.parseInt(process.env.DOOM_MAX_PLAYS || '', 3);
+  if (Number.isInteger(maxPlaysEnv) && maxPlaysEnv > 0) {
+    maxPlays = maxPlaysEnv;
+  }
+  console.log(`[lambda] max plays: ${maxPlays}`);
+  if (event?.plays && event.plays > maxPlays) {
+    console.log('[lambda] max plays reached');
     return { statusCode: 200, body: 'Doomed' };
   }
 
-  console.log('[chrome] starting local server');
+  // local server
+  console.log('[lambda] starting local server');
+  const jsonCredentials: CliTmpCredentials = {
+    Credentials: {
+      AccessKeyId: process.env.AWS_ACCESS_KEY_ID || 'AWS_ACCESS_KEY_ID',
+      SecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'AWS_SECRET_ACCESS_KEY',
+      SessionToken: process.env.AWS_SESSION_TOKEN,
+    },
+  };
   const { url, server } = await localFileServer({
-    jsonCredentials: JSON_CREDENTIALS,
-    serveDir: SERVER_BASE,
+    jsonCredentials,
+    serveDir: './dist',
   });
   const localDoomPage = `${url}/kv-iot-server.html`;
 
-  console.log('[chrome] spawning puppeteer');
+  // puppeteer
+  console.log('[lambda] spawning puppeteer');
   const doomOptions: PuppetDoomOptions = {
     localDoomPage,
     canvasId: 'doom-frame',
-    saveCode: await getState(event),
+    savedState: await getState(event),
   };
-  const browser = await puppetDoom(doomOptions);
+  const browser = await startPuppetDoom(doomOptions);
 
+  // play doom
   const timeToPlay = Math.max(context.getRemainingTimeInMillis() - 4000);
-  console.log(`Playing Doom for ${timeToPlay}ms`);
+  console.log(`[lambda] playing doom for ${timeToPlay}ms`);
+  await delay(timeToPlay);
 
-  await Promise.race([
-    delay(timeToPlay).then(async () => {
-      console.log('[chrome] time to play is up; check pointing');
-      const stateKey = await checkPoint(browser);
-      console.log('[chrome] checked point', stateKey);
-      server.close();
-      await startNext({
-        functionName: context.functionName,
-        plays: event.plays || 0,
-        stateKey: stateKey === false ? undefined : stateKey,
-      });
-    }),
-  ]);
+  // save state
+  console.log('[lambda] time to play is up; check pointing');
+  const stateKey = await stopPuppetDoom(browser);
+  console.log('[chrome] checked point', stateKey);
 
-  return { statusCode: 201, body: 'Doomed' };
+  // start next
+  await invokeNextPlay({
+    functionName: context.functionName,
+    plays: event.plays,
+    stateKey: stateKey === false ? undefined : stateKey,
+  });
+
+  // close
+  server.close();
+
+  return { statusCode: 201, body: 'Keep dooming!' };
 };
