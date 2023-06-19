@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <title>KV Dynamo Image Display</title>
-  <script async=false type="module" src="kv-dynamo.js"></script>
+  <script async=false type="module" src="kv-dynamo-server.js"></script>
 </head>
   <body>
-    <video id="remote-view" autoplay playsinline muted></video>
+    <canvas id="doom-frame" width="640" height="400" tabindex="0"></canvas>
   </body>
   <script>
     // fix aws-sdk:

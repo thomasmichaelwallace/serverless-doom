@@ -11,8 +11,8 @@ type FormValues = {
   endpoint?: string,
   channelName: string,
   clientId?: string,
-  sendVideo: boolean,
-  sendAudio: boolean,
+  sendVideo: false,
+  sendAudio: false,
   openDataChannel: boolean,
   // widescreen: boolean, // true: 1280x720 (16:9 widescreen) / false : 640x480 (4:3 fullscreen)
   width: number,
@@ -23,7 +23,6 @@ type FormValues = {
 };
 
 type Viewer = {
-  localView: HTMLVideoElement,
   remoteView: HTMLVideoElement,
   signalingClient: KVSWebRTC.SignalingClient,
   peerConnection: RTCPeerConnection,
@@ -37,14 +36,12 @@ type Viewer = {
 const viewer: Viewer = {};
 
 async function startViewer(
-  localView: HTMLVideoElement,
   remoteView: HTMLVideoElement,
   formValues: FormValues,
   // onStatsReport,
   onRemoteDataMessage: RTCDataChannel['onmessage'],
 ) {
   try {
-    viewer.localView = localView;
     viewer.remoteView = remoteView;
 
     // Create KVS client
@@ -139,14 +136,6 @@ async function startViewer(
       systemClockOffset: kinesisVideoClient.config.systemClockOffset,
     });
 
-    const resolution = {
-      width: { ideal: formValues.width },
-      height: { ideal: formValues.height },
-    };
-    const constraints = {
-      video: formValues.sendVideo ? resolution : false,
-      audio: formValues.sendAudio,
-    };
     const configuration = {
       iceServers,
       iceTransportPolicy: (formValues.forceTURN ? 'relay' : 'all') as RTCIceTransportPolicy,
@@ -163,29 +152,6 @@ async function startViewer(
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     viewer.signalingClient.on('open', async () => {
       console.log('[VIEWER] Connected to signaling service');
-
-      // Get a stream from the webcam, add it to the peer connection,
-      // and display it in the local view.
-      // If no video/audio needed, no need to request for the sources.
-      // Otherwise, the browser will throw an error saying that either video
-      // or audio has to be enabled.
-      if (formValues.sendVideo || formValues.sendAudio) {
-        try {
-          viewer.localStream = await navigator.mediaDevices.getUserMedia(constraints);
-          viewer.localStream
-            .getTracks()
-            .forEach((track) => viewer.peerConnection.addTrack(track, viewer.localStream));
-          // eslint-disable-next-line no-param-reassign
-          localView.srcObject = viewer.localStream;
-        } catch (e) {
-          console.error(`[VIEWER] Could not find ${Object
-            .keys(constraints)
-            .filter((k) => constraints[k as keyof typeof constraints])
-            .join(' and ')
-          } input device.`, e);
-          return;
-        }
-      }
 
       // Create an SDP offer to send to the master
       console.log('[VIEWER] Creating SDP offer');
@@ -269,7 +235,6 @@ async function startViewer(
   }
 }
 
-const localView = document.getElementById('local-view') as HTMLVideoElement;
 const remoteView = document.getElementById('remote-view') as HTMLVideoElement;
 const formValue: FormValues = {
   region: 'eu-west-1',
@@ -285,6 +250,6 @@ const formValue: FormValues = {
   height: 720,
   clientId: 'tom-test-client',
 };
-startViewer(localView, remoteView, formValue, (e) => {
+startViewer(remoteView, formValue, (e) => {
   console.info(e);
 }).catch((e) => { console.error(e); });

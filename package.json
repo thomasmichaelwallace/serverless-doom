@@ -9,7 +9,7 @@
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk",
-    "start": "esbuild --bundle ./viewers/*.ts --outdir=./viewers --servedir=./viewers --watch --define:process.env.PACKAGE_VERSION=1"
+    "start": "esbuild --bundle ./viewers/*.ts --outdir=./viewers --servedir=./viewers --watch --define:process.env.PACKAGE_VERSION=1 --loader:.wasm=file"
   },
   "devDependencies": {
     "@types/jest": "^29.5.1",

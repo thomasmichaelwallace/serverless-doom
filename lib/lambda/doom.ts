@@ -1,4 +1,8 @@
-import Jimp from 'jimp';
+// import Jimp from 'jimp';
+import type { JimpConstructors, Jimp as JimpType } from '@jimp/core';
+import 'jimp';
+
+const { Jimp } = window as unknown as { Jimp: JimpType & JimpConstructors };
 
 type DoomExports = {
   main: () => void;
@@ -39,7 +43,7 @@ export default class Doom {
 
   onStep: () => Promise<void>;
 
-  screen: Jimp;
+  screen: JimpType;
 
   private startAwaitable: Promise<void> | undefined = undefined;
 
