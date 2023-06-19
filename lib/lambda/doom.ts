@@ -1,4 +1,4 @@
-import { Canvas, createCanvas, createImageData } from 'canvas';
+import Jimp from 'jimp';
 
 type DoomExports = {
   main: () => void;
@@ -18,17 +18,20 @@ export default class Doom {
 
   memory: WebAssembly.Memory;
 
-  canvas: Canvas;
-
   keyDown: (keyCode: number) => void;
 
   keyUp : (keyCode: number) => void;
 
   onStep: () => Promise<void>;
 
+  screen: Jimp;
+
   constructor() {
     this.memory = new WebAssembly.Memory({ initial: 108 });
-    this.canvas = createCanvas(Doom.DOOM_SCREEN_WIDTH, Doom.DOOM_SCREEN_HEIGHT);
+    this.screen = new Jimp(Doom.DOOM_SCREEN_WIDTH, Doom.DOOM_SCREEN_HEIGHT);
+    this.onStep = async () => {};
+    this.keyDown = () => {};
+    this.keyUp = () => {};
   }
 
   readWasmString(offset: number, length: number) {
@@ -52,14 +55,11 @@ export default class Doom {
       ptr,
       Doom.DOOM_SCREEN_WIDTH * Doom.DOOM_SCREEN_HEIGHT * 4,
     );
-    const renderScreen = createImageData(
-      doomScreen,
-      Doom.DOOM_SCREEN_WIDTH,
-      Doom.DOOM_SCREEN_HEIGHT,
-    );
-    const ctx = this.canvas.getContext('2d');
-
-    ctx.putImageData(renderScreen, 0, 0);
+    this.screen = new Jimp({
+      data: doomScreen,
+      width: Doom.DOOM_SCREEN_WIDTH,
+      height: Doom.DOOM_SCREEN_HEIGHT,
+    });
   }
 
   async start(
@@ -101,5 +101,8 @@ export default class Doom {
       setTimeout(() => { step().then(() => {}).catch(() => {}); }, 1000 / 25);
     };
     await step();
+    return new Promise<void>((r) => {
+      setTimeout(() => { r(); }, 10_000);
+    });
   }
 }
