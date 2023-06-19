@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 /* eslint-disable no-console */
 import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import Doom from '../lib/common/doom';
@@ -10,22 +8,53 @@ import jsonCredentials from '../tmp/credentials.json';
 // @ts-expect-error doomWasm is a string
 import doomWasmName from '../tmp/doom.wasm';
 
-const credentials = {
-  accessKeyId: jsonCredentials.Credentials.AccessKeyId,
-  secretAccessKey: jsonCredentials.Credentials.SecretAccessKey,
-  sessionToken: jsonCredentials.Credentials.SessionToken,
-};
-const config = { region: 'eu-west-1', credentials };
-const s3 = new S3Client(config);
-
-let DUMP_TO_S3 = false;
-
 async function main() {
+  // configure aws
+  const credentials = {
+    accessKeyId: jsonCredentials.Credentials.AccessKeyId,
+    secretAccessKey: jsonCredentials.Credentials.SecretAccessKey,
+    sessionToken: jsonCredentials.Credentials.SessionToken,
+  };
+  const config = { region: 'eu-west-1', credentials };
+  const s3 = new S3Client(config);
+
+  // get doom screen
   const canvas = document.getElementById('doom-frame') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 
+  // start doom
   const doom = new Doom();
+  const doomWasm = await fetch(doomWasmName as string).then((r) => r.arrayBuffer());
+  await doom.start(doomWasm as BufferSource);
 
+  // screen
+  doom.updateScreen = (img) => {
+    const data = new ImageData(
+      img,
+      Doom.DOOM_SCREEN_WIDTH,
+      Doom.DOOM_SCREEN_HEIGHT,
+    );
+    ctx.putImageData(data, 0, 0);
+  };
+
+  // keyboard
+
+  const handleKey = (event: KeyboardEvent, type: KeyEvent) => {
+    const key = toDoomKey(event, type);
+    if (!key) return;
+
+    if (key.event === KeyEvent.KeyDown) {
+      doom.sendKeyDown(key.keyCode);
+    } else {
+      doom.sendKeyUp(key.keyCode);
+    }
+  };
+  window.addEventListener('keydown', (e) => handleKey(e, KeyEvent.KeyDown));
+  window.addEventListener('keyup', (e) => handleKey(e, KeyEvent.KeyUp));
+
+  // save/load state
+
+  let DUMP_TO_S3 = false;
   doom.onSaveState = async (state) => {
     if (DUMP_TO_S3) {
       const command = new PutObjectCommand({
@@ -73,32 +102,5 @@ async function main() {
     DUMP_TO_S3 = true;
     doom.requestSaveState();
   };
-
-  doom.updateScreen = (img) => {
-    const data = new ImageData(
-      img,
-      Doom.DOOM_SCREEN_WIDTH,
-      Doom.DOOM_SCREEN_HEIGHT,
-    );
-    ctx.putImageData(data, 0, 0);
-  };
-
-  const handleKey = (event: KeyboardEvent, type: KeyEvent) => {
-    const key = toDoomKey(event, type);
-    if (!key) return;
-
-    if (key.event === KeyEvent.KeyDown) {
-      doom.sendKeyDown(key.keyCode);
-    } else {
-      doom.sendKeyUp(key.keyCode);
-    }
-  };
-
-  window.addEventListener('keydown', (e) => handleKey(e, KeyEvent.KeyDown));
-  window.addEventListener('keyup', (e) => handleKey(e, KeyEvent.KeyUp));
-
-  const doomWasm = await fetch(doomWasmName as string).then((r) => r.arrayBuffer());
-  await doom.start(doomWasm as BufferSource);
 }
-
 main().catch((e) => { console.error(e); });

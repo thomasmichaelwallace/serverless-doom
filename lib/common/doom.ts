@@ -30,7 +30,9 @@ export default class Doom {
 
   updateScreen: (img: Uint8ClampedArray) => void;
 
-  // privates
+  // private
+
+  private awaitable: Promise<boolean> | undefined;
 
   private memory: WebAssembly.Memory;
 
@@ -104,9 +106,9 @@ export default class Doom {
   async start(
     doomWasm: BufferSource,
   ) {
-    if (this.running) {
+    if (this.running && this.awaitable) {
       console.warn('[doom] start called after init');
-      return this.running;
+      return this.awaitable;
     }
 
     const importObject = {
@@ -114,7 +116,11 @@ export default class Doom {
         js_console_log: this.buildLogger('js'),
         js_stdout: this.buildLogger('stdout'),
         js_stderr: this.buildLogger('stderr'),
-        js_milliseconds_since_start: () => this.baseTime + performance.now(),
+        js_milliseconds_since_start: () => {
+          const time = this.baseTime + performance.now();
+          console.log('[doom] js_milliseconds_since_start', time);
+          return time;
+        },
         js_draw_screen: (ptr: number) => this.draw(ptr),
       },
       env: { memory: this.memory },
@@ -137,7 +143,7 @@ export default class Doom {
     const step = async (): Promise<boolean> => {
       if (this.running) {
         console.warn('[doom] stopped');
-        return false;
+        return this.running;
       }
 
       const frameIn = performance.now();
@@ -157,13 +163,14 @@ export default class Doom {
 
       return step();
     };
-    step().catch((e) => { console.error('[doom] error', e); });
+    this.awaitable = step();
 
-    return this.running;
+    return this.awaitable;
   }
 
-  stop() {
+  async stop() {
     this.running = false;
+    return this.awaitable || Promise.resolve(this.running);
   }
 
   // privates
