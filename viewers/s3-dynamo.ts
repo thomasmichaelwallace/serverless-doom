@@ -18,7 +18,7 @@ type DoomClientOptions = {
 };
 
 class DoomClient {
-  static DOOM_FRAMES_PER_SECOND = 5;
+  static DOOM_FRAMES_PER_SECOND = 10;
 
   DOOM_FRAME_KEY: string;
 
@@ -77,8 +77,22 @@ class DoomClient {
     return `${mime},${image}`;
   }
 
-  async updateImage() {
+  async updateImageCaches() {
     this.img.src = await this.getImageBase64();
+  }
+
+  async updateImage() {
+    URL.revokeObjectURL(this.img.src); // revoke to prevent caching.
+    const command = new GetObjectCommand({
+      Bucket: this.DOOM_BUCKET_NAME,
+      Key: this.DOOM_FRAME_KEY,
+      ResponseCacheControl: 'no-cache',
+    });
+    const data = await this.s3.send(command);
+    const bytes = await data.Body?.transformToByteArray();
+    if (!bytes) return;
+    const blob = new Blob([bytes], { type: 'image/png' });
+    this.img.src = URL.createObjectURL(blob);
   }
 
   async step(): Promise<void> {
