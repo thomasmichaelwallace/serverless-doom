@@ -218,7 +218,10 @@ export default async function startMaster(
 
     console.log('[kvs] [MASTER] Starting master connection');
     master.signalingClient.open();
+
+    return master;
   } catch (e) {
     console.error('[kvs] [MASTER] Encountered error starting:', e);
+    throw e;
   }
 }

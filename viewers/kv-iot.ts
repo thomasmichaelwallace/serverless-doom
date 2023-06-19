@@ -28,8 +28,9 @@ function handleKey(event: KeyboardEvent, type: KeyEvent) {
   iot.publish(key).catch((e) => { console.error(e); });
 }
 
-async function main() {
-  await startViewer({
+async function doViewer() {
+  console.log('starting viewer');
+  const viewer = await startViewer({
     ...credentials,
     channelName: context.kinesisChannelName,
     remoteView,
@@ -38,7 +39,19 @@ async function main() {
     forceTURN: false,
     useTrickleICE: true,
   });
+  const onConnectionChanged = () => {
+    if (![undefined, 'connected', 'connecting'].includes(viewer.peerConnection?.connectionState)) {
+      console.log('connection lost', viewer.peerConnection?.connectionState);
+      viewer.peerConnection?.removeEventListener('connectionstatechange', onConnectionChanged);
+      doViewer().catch((e) => { console.error(e); });
+      window.location.reload();
+    }
+  };
+  viewer.peerConnection?.addEventListener('connectionstatechange', onConnectionChanged);
+}
 
+async function main() {
+  await doViewer();
   window.addEventListener('keydown', (e) => handleKey(e, KeyEvent.KeyDown));
   window.addEventListener('keyup', (e) => handleKey(e, KeyEvent.KeyUp));
 }

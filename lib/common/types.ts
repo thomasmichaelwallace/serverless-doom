@@ -19,3 +19,7 @@ export type DoomKey = {
   event: KeyEvent,
   keyCode: keyof typeof KeyCodes,
 };
+
+export type DoomWindow = {
+  savedState?: string,
+};

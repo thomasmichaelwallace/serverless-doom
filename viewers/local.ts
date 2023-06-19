@@ -1,11 +1,27 @@
 /* eslint-env browser */
 
 /* eslint-disable no-console */
+import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import Doom, { KeyCodes, KeyEvent } from '../lib/common/doom';
 import { fromSaveCode, getSaveCode } from '../lib/common/payload';
 import toDoomKey from '../lib/common/toDoomKey';
+import { DoomWindow } from '../lib/common/types';
+import context from '../tmp/context.json';
+import jsonCredentials from '../tmp/credentials.json';
 // @ts-expect-error doomWasm is a string
 import doomWasmName from '../tmp/doom.wasm';
+
+const credentials = {
+  accessKeyId: jsonCredentials.Credentials.AccessKeyId,
+  secretAccessKey: jsonCredentials.Credentials.SecretAccessKey,
+  sessionToken: jsonCredentials.Credentials.SessionToken,
+};
+const config = { region: 'eu-west-1', credentials };
+const s3 = new S3Client(config);
+
+let PENDING_RESTORE = false;
+let PENDING_DUMP = false;
+let PENDING_DUMP_TO_S3 = false;
 
 async function main() {
   const canvas = document.getElementById('doom-frame') as HTMLCanvasElement;
@@ -24,17 +40,33 @@ async function main() {
     doom.loadGame();
   };
 
-  const dumpGameButton = document.getElementById('doom-dump') as HTMLAnchorElement;
-  dumpGameButton.onclick = async () => {
+  const doDump = async () => {
     const dump = new Uint8Array(doom.memory.buffer, 0, doom.memory.buffer.byteLength);
     const code = await getSaveCode(dump);
     console.log('-- saveKey > --');
     console.log(code);
     console.log('-- < saveKey --');
+    (window as unknown as DoomWindow).savedState = code;
+
+    if (PENDING_DUMP_TO_S3) {
+      const command = new PutObjectCommand({
+        Bucket: context.doomBucketName,
+        Key: 'doom-state-key',
+        Body: code,
+      });
+      const response = await s3.send(command);
+      console.log('saved', response);
+    }
+    PENDING_DUMP_TO_S3 = false;
   };
-  const recoverGameButton = document.getElementById('doom-recover') as HTMLAnchorElement;
-  recoverGameButton.onclick = async () => {
-    const { saveKey } = window as unknown as { saveKey?: string };
+
+  const dumpGameButton = document.getElementById('doom-dump') as HTMLAnchorElement;
+  dumpGameButton.onclick = () => {
+    PENDING_DUMP = true;
+  };
+
+  const restore = async () => {
+    const saveKey = (window as unknown as DoomWindow).savedState;
     if (saveKey === undefined) {
       console.warn('window.saveKey must be set');
       return;
@@ -52,7 +84,43 @@ async function main() {
     console.log('recovered', dump.length);
   };
 
+  const recoverGameButton = document.getElementById('doom-recover') as HTMLAnchorElement;
+  recoverGameButton.onclick = () => {
+    PENDING_RESTORE = true;
+  };
+
+  const s3RecoverGameButton = document.getElementById('doom-s3-recover') as HTMLAnchorElement;
+  s3RecoverGameButton.onclick = async () => {
+    const command = new GetObjectCommand({
+      Bucket: context.doomBucketName,
+      Key: 'doom-state-key',
+    });
+    const response = await s3.send(command);
+    (window as unknown as DoomWindow).savedState = await response.Body?.transformToString();
+    console.log('recovered', ((window as unknown as DoomWindow).savedState || '').length);
+    PENDING_RESTORE = true;
+  };
+
+  const s3DumpGameButton = document.getElementById('doom-s3-dump') as HTMLAnchorElement;
+  s3DumpGameButton.onclick = () => {
+    PENDING_DUMP = true;
+    PENDING_DUMP_TO_S3 = true;
+  };
+
+  doom.onStep = async () => {
+    console.log('step');
+    if (PENDING_RESTORE) {
+      await restore();
+      PENDING_RESTORE = false;
+    }
+    if (PENDING_DUMP) {
+      await doDump();
+      PENDING_DUMP = false;
+    }
+  };
+
   doom.updateScreen = (img) => {
+    console.log('updateScreen');
     const data = new ImageData(
       img,
       Doom.DOOM_SCREEN_WIDTH,

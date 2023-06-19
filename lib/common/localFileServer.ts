@@ -12,7 +12,7 @@ type LocalServerOptions = {
 export default async function localFileServer({
   serveDir,
   jsonCredentials,
-}: LocalServerOptions): Promise<string> {
+}: LocalServerOptions) {
   console.log('[server]: starting local file server', serveDir);
   const server = http.createServer((request, response) => {
     if (!request.url) {
@@ -62,7 +62,7 @@ export default async function localFileServer({
       }
     });
   });
-  return new Promise<string>((resolve) => {
+  return new Promise<{ url: string, server: http.Server }>((resolve) => {
     let url = '';
     server.listen(8666, '127.0.0.1', () => {
       const address = server.address();
@@ -74,7 +74,7 @@ export default async function localFileServer({
         url = address?.family === 'IPv6' ? `http://[${address.address}]:${address.port}` : `http://${address.address}:${address.port}`;
       }
       console.log('[server] running at ', url);
-      resolve(url);
+      resolve({ url, server });
     });
   });
 }

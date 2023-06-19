@@ -1,3 +1,8 @@
+/* eslint-disable */
+
+// this file is causing a lot of issues because CompressionStream and
+// DecompressionStream are not defined in the typescript lib.
+
 const uint8ToBase64 = (arr: Uint8Array): string => btoa(
   Array(arr.length)
     .fill('')
@@ -8,6 +13,7 @@ const base64ToUint8 = (str: string): Uint8Array => Uint8Array
   .from(atob(str), (c) => c.charCodeAt(0));
 
 async function compressArrayBuffer(input: ArrayBuffer) {
+  // @ts-ignore
   const cs = new CompressionStream('deflate');
   const writer = cs.writable.getWriter();
   writer.write(input);
@@ -23,7 +29,6 @@ async function compressArrayBuffer(input: ArrayBuffer) {
   }
   const concatenated = new Uint8Array(totalSize);
   let offset = 0;
-  // eslint-disable-next-line no-restricted-syntax
   for (const array of output) {
     concatenated.set(array, offset);
     offset += array.byteLength;
@@ -32,6 +37,7 @@ async function compressArrayBuffer(input: ArrayBuffer) {
 }
 
 async function decompressArrayBuffer(input: ArrayBuffer) {
+  // @ts-ignore
   const cs = new DecompressionStream('deflate');
   const writer = cs.writable.getWriter();
   writer.write(input);

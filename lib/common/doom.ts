@@ -99,7 +99,7 @@ export default class Doom<T> {
         js_console_log: this.appendOutput('log'),
         js_stdout: this.appendOutput('stdout'),
         js_stderr: this.appendOutput('stderr'),
-        js_milliseconds_since_start: () => performance.now(),
+        js_milliseconds_since_start: () => 30 * 60 * 1000 + performance.now(),
         js_draw_screen: (ptr: number) => this.drawCanvas(ptr),
         js_put_file: (ptr: number, length: number) => {
           console.log('put file', ptr, length, this.memory.buffer);

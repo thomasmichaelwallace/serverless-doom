@@ -102,7 +102,11 @@ export default class ServerlessDoomStack extends Stack {
       entry: 'lib/lambda/kv-iot-doom.ts',
       handler: 'handler',
       runtime: Runtime.NODEJS_18_X,
-      timeout: Duration.minutes(1),
+      timeout: Duration.seconds(30),
+      environment: {
+        DOOM_BUCKET_NAME: doomBucket.bucketName,
+      },
+      // timeout: Duration.minutes(1),
       memorySize: 1024 * 3,
       bundling: {
         nodeModules: ['@sparticuz/chromium', 'vm2'],
@@ -137,5 +141,13 @@ export default class ServerlessDoomStack extends Stack {
       effect: iam.Effect.ALLOW,
       sid: 'IotAccess',
     }));
+    this.kvIotDoomLambda.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['lambda:InvokeFunction'],
+      resources: [context.kvIotDoomLambdaArn],
+      effect: iam.Effect.ALLOW,
+      sid: 'LambdaAccess',
+    }));
+    doomBucket.grantReadWrite(this.kvIotDoomLambda);
+    // this.kvIotDoomLambda.grantInvoke(this.kvIotDoomLambda);
   }
 }

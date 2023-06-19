@@ -196,9 +196,19 @@ export default async function startViewer(formValues: StartViewerParams) {
       formValues.remoteView.srcObject = viewer.remoteStream;
     });
 
+    setInterval(() => {
+      console.log('[kvs] [VIEWER]', viewer.peerConnection?.connectionState);
+    }, 1000);
+    viewer.peerConnection.addEventListener('connectionstatechange', (event) => {
+      console.log('[kvs] [VIEWER] Connection state change:', event);
+    });
+
     console.log('[kvs] [VIEWER] Starting viewer connection');
     viewer.signalingClient.open();
+
+    return viewer;
   } catch (e) {
     console.error('[kvs] [VIEWER] Encountered error starting:', e);
+    throw e;
   }
 }
