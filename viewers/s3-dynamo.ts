@@ -37,7 +37,7 @@ class DoomClient {
     credentials,
     img,
   }: DoomClientOptions) {
-    const config = { region: 'eu-west-1', credentials };
+    const config = { region: context.region, credentials };
 
     this.s3 = new S3Client(config);
     this.DOOM_BUCKET_NAME = bucketName;

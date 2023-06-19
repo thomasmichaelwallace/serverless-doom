@@ -29,11 +29,13 @@ export default class IotClient<T> {
 
     this.onMessage = () => Promise.resolve();
 
+    const region = awsIotEndpoint.split('.')[2];
+    console.log('[iot-client] inferred region as ', region);
     const staticProvider = new auth.StaticCredentialProvider({
       aws_access_id: credentials.accessKeyId,
       aws_secret_key: credentials.secretAccessKey,
       aws_sts_token: credentials.sessionToken,
-      aws_region: 'eu-west-1',
+      aws_region: region,
     });
 
     const builder = iot.AwsIotMqtt5ClientConfigBuilder.newWebsocketMqttBuilderWithSigv4Auth(

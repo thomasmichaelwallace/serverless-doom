@@ -39,6 +39,7 @@ async function main() {
 
   const awaitStream = startMaster({
     ...credentials,
+    region: context.region,
     channelName: context.kinesisChannelName,
     natTraversalDisabled: false,
     forceTURN: true,

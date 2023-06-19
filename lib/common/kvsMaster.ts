@@ -25,6 +25,7 @@ type StartMasterParams = AwsCredentials & {
   forceTURN: boolean,
   localStream: MediaStream,
   useTrickleICE: boolean,
+  region: string,
 };
 
 function printSignalingLog(message: string, clientId: string) {
@@ -37,7 +38,7 @@ export default async function startMaster(
   try {
     // Create KVS client
     const kinesisVideoClient = new AWS.KinesisVideo({
-      region: 'eu-west-1',
+      region: params.region,
       accessKeyId: params.accessKeyId,
       secretAccessKey: params.secretAccessKey,
       sessionToken: params.sessionToken,
@@ -82,7 +83,7 @@ export default async function startMaster(
       channelARN,
       channelEndpoint: endpointsByProtocol.WSS,
       role: KVSWebRTC.Role.MASTER,
-      region: 'eu-west-1',
+      region: params.region,
       credentials: {
         accessKeyId: params.accessKeyId,
         secretAccessKey: params.secretAccessKey,
@@ -93,7 +94,7 @@ export default async function startMaster(
 
     // Get ICE server configuration
     const kinesisVideoSignalingChannelsClient = new AWS.KinesisVideoSignalingChannels({
-      region: 'eu-west-1',
+      region: params.region,
       accessKeyId: params.accessKeyId,
       secretAccessKey: params.secretAccessKey,
       sessionToken: params.sessionToken,
@@ -107,7 +108,7 @@ export default async function startMaster(
       .promise();
     const iceServers = [];
     if (!params.natTraversalDisabled && !params.forceTURN) {
-      iceServers.push({ urls: 'stun:stun.kinesisvideo.eu-west-1.amazonaws.com:443' });
+      iceServers.push({ urls: `stun:stun.kinesisvideo.${params.region}.amazonaws.com:443` });
     }
     if (!params.natTraversalDisabled) {
       (getIceServerConfigResponse.IceServerList || []).forEach((iceServer) => iceServers.push({

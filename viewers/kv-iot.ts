@@ -31,6 +31,7 @@ async function doViewer() {
   console.log('starting viewer');
   const viewer = await startViewer({
     ...credentials,
+    region: context.region,
     channelName: context.kinesisChannelName,
     remoteView,
     clientId: `doom-client-${Math.floor(Math.random() * 1000)}`,

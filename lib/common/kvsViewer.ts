@@ -18,6 +18,7 @@ const viewer: Viewer = {
 };
 
 type StartViewerParams = AwsCredentials & {
+  region: string,
   remoteView: HTMLVideoElement,
   channelName: string,
   natTraversalDisabled: boolean,
@@ -26,22 +27,22 @@ type StartViewerParams = AwsCredentials & {
   useTrickleICE: boolean,
 };
 
-export default async function startViewer(formValues: StartViewerParams) {
+export default async function startViewer(params: StartViewerParams) {
   try {
-    viewer.remoteView = formValues.remoteView;
+    viewer.remoteView = params.remoteView;
 
     // Create KVS client
     const kinesisVideoClient = new AWS.KinesisVideo({
-      region: 'eu-west-1',
-      accessKeyId: formValues.accessKeyId,
-      secretAccessKey: formValues.secretAccessKey,
-      sessionToken: formValues.sessionToken,
+      region: params.region,
+      accessKeyId: params.accessKeyId,
+      secretAccessKey: params.secretAccessKey,
+      sessionToken: params.sessionToken,
       correctClockSkew: true,
     });
 
     // Get signaling channel ARN
     const describeSignalingChannelResponse = await kinesisVideoClient
-      .describeSignalingChannel({ ChannelName: formValues.channelName })
+      .describeSignalingChannel({ ChannelName: params.channelName })
       .promise();
     const channelARN = describeSignalingChannelResponse.ChannelInfo?.ChannelARN;
     if (!channelARN) throw new Error('Channel ARN not found');
@@ -69,10 +70,10 @@ export default async function startViewer(formValues: StartViewerParams) {
     console.log('[kvs] [VIEWER] Endpoints:', endpointsByProtocol);
 
     const kinesisVideoSignalingChannelsClient = new AWS.KinesisVideoSignalingChannels({
-      region: 'eu-west-1',
-      accessKeyId: formValues.accessKeyId,
-      secretAccessKey: formValues.secretAccessKey,
-      sessionToken: formValues.sessionToken,
+      region: params.region,
+      accessKeyId: params.accessKeyId,
+      secretAccessKey: params.secretAccessKey,
+      sessionToken: params.sessionToken,
       endpoint: endpointsByProtocol.HTTPS,
       correctClockSkew: true,
     });
@@ -82,10 +83,10 @@ export default async function startViewer(formValues: StartViewerParams) {
       .getIceServerConfig({ ChannelARN: channelARN })
       .promise();
     const iceServers = [];
-    if (!formValues.natTraversalDisabled && !formValues.forceTURN) {
-      iceServers.push({ urls: `stun:stun.kinesisvideo.${'eu-west-1'}.amazonaws.com:443` });
+    if (!params.natTraversalDisabled && !params.forceTURN) {
+      iceServers.push({ urls: `stun:stun.kinesisvideo.${params.region}.amazonaws.com:443` });
     }
-    if (!formValues.natTraversalDisabled) {
+    if (!params.natTraversalDisabled) {
       (getIceServerConfigResponse.IceServerList || []).forEach((iceServer) => iceServers.push({
         urls: iceServer.Uris,
         username: iceServer.Username,
@@ -98,20 +99,20 @@ export default async function startViewer(formValues: StartViewerParams) {
     viewer.signalingClient = new KVSWebRTC.SignalingClient({
       channelARN,
       channelEndpoint: endpointsByProtocol.WSS,
-      clientId: formValues.clientId,
+      clientId: params.clientId,
       role: KVSWebRTC.Role.VIEWER,
-      region: 'eu-west-1',
+      region: params.region,
       credentials: {
-        accessKeyId: formValues.accessKeyId,
-        secretAccessKey: formValues.secretAccessKey,
-        sessionToken: formValues.sessionToken,
+        accessKeyId: params.accessKeyId,
+        secretAccessKey: params.secretAccessKey,
+        sessionToken: params.sessionToken,
       },
       systemClockOffset: kinesisVideoClient.config.systemClockOffset,
     });
 
     const configuration = {
       iceServers,
-      iceTransportPolicy: formValues.forceTURN ? 'relay' : 'all' as RTCIceTransportPolicy,
+      iceTransportPolicy: params.forceTURN ? 'relay' : 'all' as RTCIceTransportPolicy,
     };
     viewer.peerConnection = new RTCPeerConnection(configuration);
 
@@ -130,7 +131,7 @@ export default async function startViewer(formValues: StartViewerParams) {
 
       // When trickle ICE is enabled, send the offer now and then send ICE candidates
       // as they are generated. Otherwise wait on the ICE candidates.
-      if (formValues.useTrickleICE) {
+      if (params.useTrickleICE) {
         console.log('[kvs] [VIEWER] Sending SDP offer');
         viewer.signalingClient?.sendSdpOffer(
           viewer.peerConnection?.localDescription as RTCSessionDescription,
@@ -167,7 +168,7 @@ export default async function startViewer(formValues: StartViewerParams) {
         console.log('[kvs] [VIEWER] Generated ICE candidate');
 
         // When trickle ICE is enabled, send the ICE candidates as they are generated.
-        if (formValues.useTrickleICE) {
+        if (params.useTrickleICE) {
           console.log('[kvs] [VIEWER] Sending ICE candidate');
           viewer.signalingClient?.sendIceCandidate(candidate);
         }
@@ -176,7 +177,7 @@ export default async function startViewer(formValues: StartViewerParams) {
 
         // When trickle ICE is disabled, send the offer now that all the
         // ICE candidates have ben generated.
-        if (!formValues.useTrickleICE) {
+        if (!params.useTrickleICE) {
           console.log('[kvs] [VIEWER] Sending SDP offer');
           viewer.signalingClient?.sendSdpOffer(
             viewer.peerConnection?.localDescription as RTCSessionDescription,
@@ -188,12 +189,12 @@ export default async function startViewer(formValues: StartViewerParams) {
     // As remote tracks are received, add them to the remote view
     viewer.peerConnection.addEventListener('track', (event) => {
       console.log('[kvs] [VIEWER] Received remote track');
-      if (formValues.remoteView.srcObject) {
+      if (params.remoteView.srcObject) {
         return;
       }
       [viewer.remoteStream] = event.streams;
       // eslint-disable-next-line no-param-reassign
-      formValues.remoteView.srcObject = viewer.remoteStream;
+      params.remoteView.srcObject = viewer.remoteStream;
     });
 
     setInterval(() => {

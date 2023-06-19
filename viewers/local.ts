@@ -15,7 +15,7 @@ async function main() {
     secretAccessKey: jsonCredentials.Credentials.SecretAccessKey,
     sessionToken: jsonCredentials.Credentials.SessionToken,
   };
-  const config = { region: 'eu-west-1', credentials };
+  const config = { region: context.region, credentials };
   const s3 = new S3Client(config);
 
   // get doom screen
