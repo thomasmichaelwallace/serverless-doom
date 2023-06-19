@@ -84,6 +84,7 @@ export default class Doom {
       console.warn('[doom] start called after init');
       return this.awaitable;
     }
+    this.running = true;
 
     const importObject = {
       js: {
@@ -111,7 +112,7 @@ export default class Doom {
 
     // Main game loop
     const step = async (): Promise<boolean> => {
-      if (this.running) {
+      if (!this.running) {
         console.warn('[doom] stopped');
         return this.running;
       }
