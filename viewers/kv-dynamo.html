@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>KV Dynamo Image Display</title>
+  <script async=false type="module" src="kv-dynamo.js"></script>
+</head>
+  <body>
+    <video id="local-view" autoplay playsinline controls muted></video>
+    <video id="remote-view" autoplay playsinline controls muted></video>
+  </body>
+  <script>
+    // fix aws-sdk:
+    (window).global = window;
+  </script>
+</html>
