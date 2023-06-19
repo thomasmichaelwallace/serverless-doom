@@ -2,10 +2,8 @@
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import chromium from '@sparticuz/chromium';
 import { Handler } from 'aws-lambda';
-import fs from 'fs';
-import http from 'http';
-import path from 'path';
 import puppeteer, { Page } from 'puppeteer-core';
+import localFileServer from '../common/localFileServer';
 
 console.log('imported');
 
@@ -13,12 +11,11 @@ const s3 = new S3Client({});
 
 const delay = (ms: number) => new Promise((resolve) => { setTimeout(resolve, ms); });
 
-const jsonCredentials = {
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+const JSON_CREDENTIALS = {
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'AWS_ACCESS_KEY_ID',
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'AWS_SECRET_ACCESS_KEY',
   sessionToken: process.env.AWS_SESSION_TOKEN,
 };
-
 const SERVER_BASE = './dist';
 
 let photoCount = 0;
@@ -35,74 +32,6 @@ async function postPhoto(page: Page) {
   await s3.send(command);
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   setTimeout(() => postPhoto(page), 2000);
-}
-
-async function startLocalServer() {
-  const server = http.createServer((request, response) => {
-    console.log('request starting...');
-
-    if (!request.url) {
-      console.warn('[server]: 404');
-      response.writeHead(404);
-      response.end();
-      return;
-    }
-
-    let filePath = request.url;
-    if (filePath === '/') { filePath = '/index.html'; }
-    if (filePath === '/credentials.json') {
-      console.log('[server]: 200', 'credentials.json');
-      response.writeHead(200, { 'Content-Type': 'application/json' });
-      response.end(JSON.stringify(jsonCredentials), 'utf-8');
-      return;
-    }
-    filePath = path.join(SERVER_BASE, filePath);
-
-    console.log('[server] request', filePath, request.url);
-
-    const extname = path.extname(filePath);
-    let contentType = 'text/html';
-    switch (extname) {
-      case '.js':
-        contentType = 'text/javascript';
-        break;
-      case '.json':
-        contentType = 'application/json';
-        break;
-      default:
-        contentType = 'text/html';
-        break;
-    }
-
-    fs.readFile(filePath, (error, content) => {
-      if (error) {
-        if (error.code === 'ENOENT') {
-          console.warn('[server]: 404', filePath);
-          response.writeHead(404, { 'Content-Type': contentType });
-          response.end('file not found', 'utf-8');
-        }
-      } else {
-        console.log('[server]: 200', filePath);
-        response.writeHead(200, { 'Content-Type': contentType });
-        response.end(content, 'utf-8');
-      }
-    });
-  });
-  return new Promise<string>((resolve) => {
-    let url = '';
-    server.listen(8666, '127.0.0.1', () => {
-      const address = server.address();
-      if (typeof address === 'string') {
-        url = address;
-      } else if (address === null) {
-        url = 'http://localhost:80';
-      } else {
-        url = address?.family === 'IPv6' ? `http://[${address.address}]:${address.port}` : `http://${address.address}:${address.port}`;
-      }
-      console.log('Server running at ', url);
-      resolve(url);
-    });
-  });
 }
 
 type PuppetDoomOptions = {
@@ -133,13 +62,44 @@ async function puppetDoom({
   await page.waitForSelector(canvasSelector);
   await page.click(canvasSelector); // start doom!
   await postPhoto(page);
+
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  setTimeout(async () => {
+    console.log('[page] downloading for video');
+    await page.evaluate(() => {
+      const a = document.querySelector('#download-doom-video') as HTMLAnchorElement;
+      window.open(a.href);
+    });
+    const newTarget = await page.browserContext().waitForTarget(
+      (target) => target.url().startsWith('blob:'),
+    );
+    const newPage = await newTarget.page();
+    const blobUrl = newPage?.url() as string;
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    page.once('response', async (response) => {
+      const video = await response.buffer();
+      const Key = `${process.env.DOOM_PHOTO_KEY || 'ss'}-video.mp4`;
+      const command = new PutObjectCommand({
+        Bucket: process.env.DOOM_BUCKET_NAME,
+        Key,
+        Body: video,
+      });
+      console.log('postPhoto', Key);
+      await s3.send(command);
+    });
+    await page.evaluate(async (url) => { await fetch(url); }, blobUrl);
+  }, 15 * 1000);
+
   return browser;
 }
 
 // eslint-disable-next-line import/prefer-default-export
 export const handler : Handler = async (_, context) => {
   console.log('[chrome] starting local server');
-  const url = await startLocalServer();
+  const url = await localFileServer({
+    jsonCredentials: JSON_CREDENTIALS,
+    serveDir: SERVER_BASE,
+  });
   const localDoomPage = `${url}/kv-doom-server.html`;
   console.log('[chrome] spawning puppeteer');
   const doomOptions: PuppetDoomOptions = {

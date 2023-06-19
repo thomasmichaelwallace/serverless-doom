@@ -1,77 +1,10 @@
 /* eslint-disable no-console */
-import fs from 'fs';
-import http from 'http';
-import path from 'path';
+import * as fs from 'fs';
 import puppeteer from 'puppeteer';
+import localFileServer from '../lib/common/localFileServer';
 import jsonCredentials from '../tmp/credentials.json';
 
 const SERVER_BASE = './dist';
-
-const server = http.createServer((request, response) => {
-  console.log('request starting...');
-
-  if (!request.url) {
-    console.warn('[server]: 404');
-    response.writeHead(404);
-    response.end();
-    return;
-  }
-
-  let filePath = request.url;
-  if (filePath === '/') { filePath = '/index.html'; }
-  if (filePath === '/credentials.json') {
-    console.log('[server]: 200', 'credentials.json');
-    response.writeHead(200, { 'Content-Type': 'application/json' });
-    response.end(JSON.stringify(jsonCredentials), 'utf-8');
-    return;
-  }
-  filePath = path.join(SERVER_BASE, filePath);
-
-  console.log('[server] request', filePath, request.url);
-
-  const extname = path.extname(filePath);
-  let contentType = 'text/html';
-  switch (extname) {
-    case '.js':
-      contentType = 'text/javascript';
-      break;
-    case '.json':
-      contentType = 'application/json';
-      break;
-    default:
-      contentType = 'text/html';
-      break;
-  }
-
-  fs.readFile(filePath, (error, content) => {
-    if (error) {
-      if (error.code === 'ENOENT') {
-        console.warn('[server]: 404', filePath);
-        response.writeHead(404, { 'Content-Type': contentType });
-        response.end('file not found', 'utf-8');
-      }
-    } else {
-      console.log('[server]: 200', filePath);
-      response.writeHead(200, { 'Content-Type': contentType });
-      response.end(content, 'utf-8');
-    }
-  });
-});
-let url = '';
-const awaitServer = new Promise<void>((resolve) => {
-  server.listen(8666, '127.0.0.1', () => {
-    const address = server.address();
-    if (typeof address === 'string') {
-      url = address;
-    } else if (address === null) {
-      url = 'http://localhost:80';
-    } else {
-      url = address?.family === 'IPv6' ? `http://[${address.address}]:${address.port}` : `http://${address.address}:${address.port}`;
-    }
-    console.log('Server running at ', url);
-  });
-  resolve();
-});
 
 type PuppetDoomOptions = {
   localDoomPage: string;
@@ -90,12 +23,36 @@ async function puppetDoom({
   await page.waitForSelector(canvasSelector);
   await page.click(canvasSelector); // start doom!
   await page.screenshot({ path: 'tmp/doom.png' });
+
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  setTimeout(async () => {
+    console.log('[page] downloading for video');
+    await page.evaluate(() => {
+      const a = document.querySelector('#download-doom-video') as HTMLAnchorElement;
+      window.open(a.href);
+    });
+    const newTarget = await page.browserContext().waitForTarget(
+      (target) => target.url().startsWith('blob:'),
+    );
+    const newPage = await newTarget.page();
+    const blobUrl = newPage?.url() as string;
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    page.once('response', async (response) => {
+      const video = await response.buffer();
+      fs.writeFileSync('./tmp/doom.mp4', video);
+    });
+    await page.evaluate(async (url) => { await fetch(url); }, blobUrl);
+  }, 15 * 1000);
+
   return browser;
 }
 
 async function main() {
   console.log('[chrome] spawning puppeteer');
-  await awaitServer;
+  const url = await localFileServer({
+    serveDir: SERVER_BASE,
+    jsonCredentials,
+  });
   const localDoomPage = `${url}/kv-doom-server.html`;
   console.log('[chrome] url', localDoomPage);
   const doomOptions: PuppetDoomOptions = {

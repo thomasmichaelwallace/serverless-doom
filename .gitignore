@@ -135,3 +135,6 @@ cdk.out
 
 # tmp
 tmp/
+
+# mac
+.DS_Store

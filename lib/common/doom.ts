@@ -1,9 +1,3 @@
-// import Jimp from 'jimp';
-import type { JimpConstructors, Jimp as JimpType } from '@jimp/core';
-import 'jimp';
-
-const { Jimp } = window as unknown as { Jimp: JimpType & JimpConstructors };
-
 type DoomExports = {
   main: () => void;
   add_browser_event: (eventType: 0 | 1, keyCode: number) => void;
@@ -28,7 +22,7 @@ export enum KeyCodes {
 
 const delay = (ms: number) => new Promise((resolve) => { setTimeout(resolve, ms); });
 
-export default class Doom {
+export default class Doom<T> {
   static DOOM_SCREEN_HEIGHT = 200 * 2;
 
   static DOOM_SCREEN_WIDTH = 320 * 2;
@@ -43,13 +37,15 @@ export default class Doom {
 
   onStep: () => Promise<void>;
 
-  screen: JimpType;
+  screen: T;
+
+  updateScreen: (img: Uint8ClampedArray) => void;
 
   private startAwaitable: Promise<void> | undefined = undefined;
 
-  constructor() {
+  constructor(screen: T) {
     this.memory = new WebAssembly.Memory({ initial: 108 });
-    this.screen = new Jimp(Doom.DOOM_SCREEN_WIDTH, Doom.DOOM_SCREEN_HEIGHT);
+    this.screen = screen;
     this.onStep = async () => {};
     this.keyDown = () => {};
     this.keyUp = () => {};
@@ -71,16 +67,12 @@ export default class Doom {
   }
 
   drawCanvas(ptr: number) {
-    const doomScreen = new Uint8ClampedArray(
+    const img = new Uint8ClampedArray(
       this.memory.buffer,
       ptr,
       Doom.DOOM_SCREEN_WIDTH * Doom.DOOM_SCREEN_HEIGHT * 4,
     );
-    this.screen = new Jimp({
-      data: doomScreen,
-      width: Doom.DOOM_SCREEN_WIDTH,
-      height: Doom.DOOM_SCREEN_HEIGHT,
-    });
+    this.updateScreen(img);
   }
 
   async start(

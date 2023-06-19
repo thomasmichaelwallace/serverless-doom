@@ -1,17 +1,10 @@
+/* eslint-disable no-console */
 import * as KVSWebRTC from 'amazon-kinesis-video-streams-webrtc';
 import AWS from 'aws-sdk';
-import Doom from '../lib/lambda/doom';
+import Doom from '../lib/common/doom';
+import type { AwsCredentials } from '../lib/common/types';
 // @ts-expect-error doomWasm is a string
 import doomWasmName from '../tmp/doom.wasm';
-
-/* eslint-disable no-console */
-// import Doom from '../lib/lambda/doom';
-
-type AwsCredentials = {
-  accessKeyId: string,
-  secretAccessKey: string,
-  sessionToken?: string,
-};
 
 type FormValues = AwsCredentials & {
   region: string,
@@ -299,19 +292,43 @@ async function startMaster(
   }
 }
 
+function saveMp4(s: number) {
+  const canvas = document.getElementById('doom-frame') as HTMLCanvasElement;
+  const stream = canvas.captureStream();
+  const chunks: Blob[] = [];
+
+  const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+  mediaRecorder.ondataavailable = (event) => {
+    chunks.push(event.data);
+  };
+  mediaRecorder.onstop = () => {
+    const blob = new Blob(chunks, { type: 'video/mp4' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.id = 'download-doom-video';
+    a.href = url;
+    a.download = 'my-video.mp4';
+    document.body.appendChild(a);
+    console.log('?', a.id, a.href);
+  };
+
+  mediaRecorder.start();
+
+  setTimeout(() => {
+    mediaRecorder.stop();
+  }, s * 1000);
+}
+
 async function main() {
   const canvas = document.getElementById('doom-frame') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 
-  const doom = new Doom();
-
-  // eslint-disable-next-line @typescript-eslint/require-await
-  doom.onStep = async () => {
-    const { bitmap } = doom.screen;
+  const doom = new Doom(ctx);
+  doom.updateScreen = (img) => {
     const data = new ImageData(
-      Uint8ClampedArray.from(bitmap.data),
-      bitmap.width,
-      bitmap.height,
+      img,
+      Doom.DOOM_SCREEN_WIDTH,
+      Doom.DOOM_SCREEN_HEIGHT,
     );
     ctx.putImageData(data, 0, 0);
   };
@@ -334,6 +351,8 @@ async function main() {
     height: Doom.DOOM_SCREEN_HEIGHT,
   };
   const awaitStream = startMaster(canvas, streamOptions);
+
+  saveMp4(10);
 
   return Promise.all([awaitDoom, awaitStream]);
 }

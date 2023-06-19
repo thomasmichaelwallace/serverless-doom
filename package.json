@@ -6,9 +6,11 @@
   },
   "scripts": {
     "build:kv": "esbuild --bundle ./viewers/kv-dynamo-server.ts --outfile=./dist/kv-dynamo-server.js --define:process.env.PACKAGE_VERSION=1 --loader:.wasm=file && cp ./viewers/kv-doom-server.html ./dist",
-    "watch": "tsc -w",
-    "test": "jest",
     "cdk": "cdk",
+    "lint:types": "tsc --noEmit",
+    "lint:js": "eslint . --ext .ts --max-warnings=0",
+    "lint": "npm run lint:js && npm run lint:types",
+    "test": "jest",
     "start": "esbuild --bundle ./viewers/*.ts --outdir=./viewers --servedir=./viewers --watch --define:process.env.PACKAGE_VERSION=1 --loader:.wasm=file"
   },
   "devDependencies": {

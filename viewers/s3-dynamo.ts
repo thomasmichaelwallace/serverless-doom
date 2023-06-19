@@ -4,7 +4,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { Credentials } from 'aws-lambda';
-import { KeyCodes, KeyEvent } from '../lib/lambda/doom';
+import { KeyCodes, KeyEvent } from '../lib/common/doom';
 import jsonCredentials from '../tmp/credentials.json';
 
 const delay = (ms: number) => new Promise((resolve) => { setTimeout(resolve, ms); });

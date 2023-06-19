@@ -1,9 +1,18 @@
 import { readFileSync, writeFileSync } from 'fs';
-import Doom from '../lib/lambda/doom';
+import Jimp from 'jimp';
+import Doom from '../lib/common/doom';
 
 async function main() {
   const wasm = readFileSync('./tmp/doom.wasm');
-  const doom = new Doom();
+  const screen = new Jimp(Doom.DOOM_SCREEN_WIDTH, Doom.DOOM_SCREEN_HEIGHT);
+  const doom = new Doom(screen);
+  doom.updateScreen = (data) => {
+    doom.screen = new Jimp({
+      data,
+      width: Doom.DOOM_SCREEN_WIDTH,
+      height: Doom.DOOM_SCREEN_HEIGHT,
+    });
+  };
   doom.onStep = async () => {
     const png = await doom.screen.getBufferAsync('image/png');
     writeFileSync('./tmp/doom.png', png);

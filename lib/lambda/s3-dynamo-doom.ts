@@ -1,9 +1,12 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { DeleteCommand, DynamoDBDocumentClient, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import type { JimpConstructors, Jimp as JimpType } from '@jimp/core';
 import { Handler } from 'aws-lambda';
-import Doom, { KeyCodes, KeyEvent } from './doom';
+import 'jimp';
+import Doom, { KeyCodes, KeyEvent } from '../common/doom';
 
+const { Jimp } = window as unknown as { Jimp: JimpType & JimpConstructors };
 const s3 = new S3Client({});
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
@@ -50,7 +53,15 @@ export const handler : Handler = async (_, context) => {
   const wasm = await getDoomWasm();
   if (!wasm) return { statusCode: 500, body: 'Failed to load Doom' };
 
-  const doom = new Doom();
+  const screen = new Jimp(Doom.DOOM_SCREEN_WIDTH, Doom.DOOM_SCREEN_HEIGHT);
+  const doom = new Doom(screen);
+  doom.updateScreen = (data) => {
+    doom.screen = new Jimp({
+      data,
+      width: Doom.DOOM_SCREEN_WIDTH,
+      height: Doom.DOOM_SCREEN_HEIGHT,
+    });
+  };
 
   const fps = Number.parseInt(process.env.DOOM_FRAMES_PER_SECOND || '', 10);
   if (Number.isInteger(fps) && fps > 0) {
