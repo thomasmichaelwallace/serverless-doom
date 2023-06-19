@@ -76,7 +76,7 @@ export default class ServerlessDoomStack extends Stack {
         nodeModules: ['@sparticuz/chromium', 'vm2'],
         commandHooks: {
           beforeBundling(): string[] {
-            return [];
+            return ['npm run build:kv']; // rebuild dist
           },
           beforeInstall(): string[] {
             return [];
