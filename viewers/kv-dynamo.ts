@@ -1,8 +1,9 @@
 /* eslint-disable no-console */
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
-import { KeyCodes, KeyEvent } from '../lib/common/doom';
+import { KeyEvent } from '../lib/common/doom';
 import startViewer from '../lib/common/kvsViewer';
+import toDoomKey from '../lib/common/toDoomKey';
 import context from '../tmp/context.json';
 import jsonCredentials from '../tmp/credentials.json';
 
@@ -19,33 +20,16 @@ const config = { region: 'eu-west-1', credentials };
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient(config));
 
 function handleKey(event: KeyboardEvent, type: KeyEvent) {
-  if (event.repeat) return;
-  const doomMap: Record<string, keyof typeof KeyCodes> = {
-    Enter: 'Enter',
-    ArrowLeft: 'Left',
-    ArrowRight: 'Right',
-    ArrowUp: 'Up',
-    ArrowDown: 'Down',
-    Control: 'Ctrl',
-    ' ': 'Space',
-    Alt: 'Alt',
-  };
-  const keyCode = doomMap[event.key];
-  if (keyCode) {
-    const command = new PutCommand({
-      Item: {
-        ts: performance.now(),
-        event: type,
-        keyCode,
-      },
-      TableName: DOOM_KEY_DB_TABLE_NAME,
-    });
-    ddb.send(command).catch((e) => {
-      console.error('Failed to save key', e);
-    });
-  }
+  const Item = toDoomKey(event, type);
+  if (!Item) return;
 
-  event.preventDefault();
+  const command = new PutCommand({
+    Item,
+    TableName: DOOM_KEY_DB_TABLE_NAME,
+  });
+  ddb.send(command).catch((e) => {
+    console.error('Failed to save key', e);
+  });
 }
 
 async function main() {

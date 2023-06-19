@@ -5,7 +5,8 @@
     "serverless-doom": "bin/serverless-doom.js"
   },
   "scripts": {
-    "build:kv": "esbuild --bundle ./viewers/kv-dynamo-server.ts --outfile=./dist/kv-dynamo-server.js --define:process.env.PACKAGE_VERSION=1 --loader:.wasm=file && cp ./viewers/kv-doom-server.html ./dist",
+    "build:kv-dynamo": "esbuild --bundle ./viewers/kv-dynamo-server.ts --outfile=./dist/kv-dynamo-server.js --define:process.env.PACKAGE_VERSION=1 --loader:.wasm=file && cp ./viewers/kv-dynamo-server.html ./dist",
+    "build:kv-iot": "esbuild --bundle ./viewers/kv-iot-server.ts --outfile=./dist/kv-iot-server.js --define:process.env.PACKAGE_VERSION=1 --loader:.wasm=file && cp ./viewers/kv-iot-server.html ./dist",
     "cdk": "cdk",
     "lint:types": "tsc --noEmit",
     "lint:js": "eslint . --ext .ts --max-warnings=0",

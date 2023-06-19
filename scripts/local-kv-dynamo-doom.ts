@@ -36,7 +36,7 @@ async function main() {
       },
     },
   });
-  const localDoomPage = `${url}/kv-doom-server.html`;
+  const localDoomPage = `${url}/kv-dynamo-server.html`;
   console.log('[chrome] url', localDoomPage);
   const doomOptions: PuppetDoomOptions = {
     localDoomPage,

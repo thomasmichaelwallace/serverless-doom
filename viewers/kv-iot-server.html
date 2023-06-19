@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>KV Dynamo Image Display</title>
+  <script async=false type="module" src="kv-iot-server.js"></script>
+</head>
+  <body>
+    <canvas id="doom-frame" width="640" height="400" tabindex="0"></canvas>
+  </body>
+  <script>
+    // fix aws-sdk:
+    (window).global = window;
+  </script>
+</html>

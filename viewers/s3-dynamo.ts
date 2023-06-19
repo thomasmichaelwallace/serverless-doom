@@ -1,10 +1,10 @@
-/* eslint-env browser */
-
+/* eslint-disable no-console */
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { Credentials } from 'aws-lambda';
-import { KeyCodes, KeyEvent } from '../lib/common/doom';
+import { KeyEvent } from '../lib/common/doom';
+import toDoomKey from '../lib/common/toDoomKey';
 import context from '../tmp/context.json';
 import jsonCredentials from '../tmp/credentials.json';
 
@@ -53,34 +53,16 @@ class DoomClient {
   }
 
   handleKey(event: KeyboardEvent, type: KeyEvent) {
-    if (event.repeat) return;
-    const doomMap: Record<string, keyof typeof KeyCodes> = {
-      Enter: 'Enter',
-      ArrowLeft: 'Left',
-      ArrowRight: 'Right',
-      ArrowUp: 'Up',
-      ArrowDown: 'Down',
-      Control: 'Ctrl',
-      ' ': 'Space',
-      Alt: 'Alt',
-    };
-    const keyCode = doomMap[event.key];
-    if (keyCode) {
-      const command = new PutCommand({
-        Item: {
-          ts: performance.now(),
-          event: type,
-          keyCode,
-        },
-        TableName: this.DOOM_KEY_DB_TABLE_NAME,
-      });
-      this.ddb.send(command).catch((e) => {
-        // eslint-disable-next-line no-console
-        console.error('Failed to save key', e);
-      });
-    }
+    const Item = toDoomKey(event, type);
+    if (!Item) return;
 
-    event.preventDefault();
+    const command = new PutCommand({
+      Item,
+      TableName: this.DOOM_KEY_DB_TABLE_NAME,
+    });
+    this.ddb.send(command).catch((e) => {
+      console.error('Failed to save key', e);
+    });
   }
 
   async getImageBase64() {
@@ -106,7 +88,6 @@ class DoomClient {
     if (timeToWait > 0) {
       await delay(timeToWait);
     } else {
-    // eslint-disable-next-line no-console
       console.warn(`Frame took ${-timeToWait}ms too long`);
     }
     return this.step();
@@ -124,7 +105,6 @@ function main() {
     tableName: context.doomKeyDbTableName,
     img: document.getElementById('doom-frame') as HTMLImageElement,
   });
-  // eslint-disable-next-line no-console
   client.step().catch((e) => { console.error(e); });
 }
 main();
