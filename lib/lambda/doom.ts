@@ -6,9 +6,20 @@ type DoomExports = {
   doom_loop_step: () => void;
 };
 
-enum KeyEvent {
+export enum KeyEvent {
   KeyDown = 0,
   KeyUp = 1,
+}
+
+export enum KeyCodes {
+  Enter = 13,
+  Left = 0xac,
+  Right = 0xae,
+  Up = 0xad,
+  Down = 0xaf,
+  Ctrl = 0x80 + 0x1d,
+  Space = 32,
+  Alt = 0x80 + 0x38,
 }
 
 const delay = (ms: number) => new Promise((resolve) => { setTimeout(resolve, ms); });

@@ -43,6 +43,7 @@ export default class ServerlessDoomStack extends Stack {
       DOOM_WASM_KEY: 'doom.wasm',
       DOOM_FRAME_KEY: 'doom-frame.png',
       DOOM_FRAMES_PER_SECOND: '5',
+      DOOM_KEY_DB_TABLE_NAME: doomKeyDb.tableName,
     };
     this.s3DynamoDoomLambda = new NodejsFunction(this, 'S3DynamoDoomHandler', {
       entry: 'lib/lambda/s3-dynamo-doom.ts',
@@ -52,6 +53,8 @@ export default class ServerlessDoomStack extends Stack {
       timeout: Duration.seconds(30),
       memorySize: 1024,
     });
+
     doomBucket.grantReadWrite(this.s3DynamoDoomLambda);
+    doomKeyDb.grantReadWriteData(this.s3DynamoDoomLambda);
   }
 }
