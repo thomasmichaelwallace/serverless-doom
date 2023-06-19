@@ -1,10 +1,9 @@
 /* eslint-disable no-console */
+
 type DoomExports = {
   main: () => void;
   add_browser_event: (eventType: 0 | 1, keyCode: number) => void;
   doom_loop_step: () => void;
-  doom_save: () => void;
-  doom_load: (len: number) => void;
 };
 
 export enum KeyEvent {
@@ -31,9 +30,9 @@ export default class Doom<T> {
 
   static DOOM_SCREEN_WIDTH = 320 * 2;
 
-  DOOM_FRAMES_PER_SECOND = 25;
+  private memory: WebAssembly.Memory;
 
-  memory: WebAssembly.Memory;
+  framesPerSecond = 25;
 
   keyDown: (keyCode: number) => void;
 
@@ -45,14 +44,6 @@ export default class Doom<T> {
 
   updateScreen: (img: Uint8ClampedArray) => void;
 
-  // eslint-disable-next-line class-methods-use-this
-  saveGame: () => void = () => {};
-
-  // eslint-disable-next-line class-methods-use-this
-  loadGame: () => void = () => {};
-
-  private saveFile: Uint8Array | undefined = undefined;
-
   private startAwaitable: Promise<void> | undefined = undefined;
 
   constructor(screen: T) {
@@ -63,12 +54,12 @@ export default class Doom<T> {
     this.keyUp = () => {};
   }
 
-  readWasmString(offset: number, length: number) {
+  private readWasmString(offset: number, length: number) {
     const bytes = new Uint8Array(this.memory.buffer, offset, length);
     return new TextDecoder('utf8').decode(bytes);
   }
 
-  appendOutput(style: string) {
+  private appendOutput(style: string) {
     return (offset: number, length: number) => {
       const lines = this.readWasmString(offset, length).split('\n');
       lines.forEach((l) => {
@@ -101,23 +92,6 @@ export default class Doom<T> {
         js_stderr: this.appendOutput('stderr'),
         js_milliseconds_since_start: () => 30 * 60 * 1000 + performance.now(),
         js_draw_screen: (ptr: number) => this.drawCanvas(ptr),
-        js_put_file: (ptr: number, length: number) => {
-          console.log('put file', ptr, length, this.memory.buffer);
-          const bytes = new Uint8Array(this.memory.buffer, ptr, length).slice();
-          console.log('put file', bytes);
-          this.saveFile = bytes;
-          console.log('saved', length, this.saveFile);
-        },
-        js_write_file: (ptr: number) => {
-          if (this.saveFile === undefined) {
-            console.warn('No save file');
-            return;
-          }
-
-          const bytes = new Uint8Array(this.memory.buffer, ptr, this.saveFile.length);
-          bytes.set(this.saveFile);
-          console.log('loaded', this.saveFile.length, bytes);
-        },
       },
       env: { memory: this.memory },
     };
@@ -128,23 +102,9 @@ export default class Doom<T> {
       main: startDoom,
       add_browser_event: sendBrowserEvent,
       doom_loop_step: nextDoomStep,
-      doom_save: saveDoom,
-      doom_load: loadDoom,
     } = doom.instance.exports as DoomExports;
 
     startDoom();
-
-    // save and load
-    this.saveGame = () => saveDoom();
-    this.loadGame = () => {
-      if (this.saveFile === undefined) {
-        console.warn('No save file');
-        return;
-      }
-
-      console.log('loading', this.saveFile.length);
-      loadDoom(this.saveFile.length);
-    };
 
     // input
     this.keyDown = function onKeyDown(keyCode) {
@@ -161,7 +121,7 @@ export default class Doom<T> {
       nextDoomStep();
       await this.onStep();
 
-      const timeToWait = (1000 / this.DOOM_FRAMES_PER_SECOND) - (performance.now() - frameIn);
+      const timeToWait = (1000 / this.framesPerSecond) - (performance.now() - frameIn);
       if (timeToWait > 0) {
         await delay(timeToWait);
       } else {

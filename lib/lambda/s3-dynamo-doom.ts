@@ -58,9 +58,9 @@ export const handler : Handler = async (_, context) => {
 
   const fps = Number.parseInt(process.env.DOOM_FRAMES_PER_SECOND || '', 10);
   if (Number.isInteger(fps) && fps > 0) {
-    doom.DOOM_FRAMES_PER_SECOND = Math.min(fps, doom.DOOM_FRAMES_PER_SECOND);
+    doom.framesPerSecond = Math.min(fps, doom.framesPerSecond);
     // eslint-disable-next-line no-console
-    console.log(`Setting FPS to ${doom.DOOM_FRAMES_PER_SECOND}`);
+    console.log(`Setting FPS to ${doom.framesPerSecond}`);
   }
 
   doom.onStep = async () => {
