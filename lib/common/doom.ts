@@ -34,9 +34,11 @@ export default class Doom<T> {
 
   framesPerSecond = 25;
 
-  keyDown: (keyCode: number) => void;
+  baseTime = 0;
 
-  keyUp : (keyCode: number) => void;
+  sendKeyDown: (keyCode: number) => void;
+
+  sendKeyUp : (keyCode: number) => void;
 
   onStep: () => Promise<void>;
 
@@ -50,8 +52,8 @@ export default class Doom<T> {
     this.memory = new WebAssembly.Memory({ initial: 108 });
     this.screen = screen;
     this.onStep = async () => {};
-    this.keyDown = () => {};
-    this.keyUp = () => {};
+    this.sendKeyDown = () => {};
+    this.sendKeyUp = () => {};
   }
 
   private readWasmString(offset: number, length: number) {
@@ -59,16 +61,14 @@ export default class Doom<T> {
     return new TextDecoder('utf8').decode(bytes);
   }
 
-  private appendOutput(style: string) {
+  private log(style: string) {
     return (offset: number, length: number) => {
       const lines = this.readWasmString(offset, length).split('\n');
-      lines.forEach((l) => {
-        console.log(`[${style}] ${l}`);
-      });
+      lines.forEach((l) => { console.log(`[doom-${style}] ${l}`); });
     };
   }
 
-  drawCanvas(ptr: number) {
+  private draw(ptr: number) {
     const img = new Uint8ClampedArray(
       this.memory.buffer,
       ptr,
@@ -87,11 +87,11 @@ export default class Doom<T> {
 
     const importObject = {
       js: {
-        js_console_log: this.appendOutput('log'),
-        js_stdout: this.appendOutput('stdout'),
-        js_stderr: this.appendOutput('stderr'),
-        js_milliseconds_since_start: () => 30 * 60 * 1000 + performance.now(),
-        js_draw_screen: (ptr: number) => this.drawCanvas(ptr),
+        js_console_log: this.log('js'),
+        js_stdout: this.log('stdout'),
+        js_stderr: this.log('stderr'),
+        js_milliseconds_since_start: () => this.baseTime + performance.now(),
+        js_draw_screen: (ptr: number) => this.draw(ptr),
       },
       env: { memory: this.memory },
     };
@@ -99,26 +99,22 @@ export default class Doom<T> {
     const doom = await WebAssembly.instantiate(doomWasm, importObject);
 
     const {
-      main: startDoom,
-      add_browser_event: sendBrowserEvent,
-      doom_loop_step: nextDoomStep,
+      main: initDoom,
+      add_browser_event: sendDoomKey,
+      doom_loop_step: stepDoom,
     } = doom.instance.exports as DoomExports;
 
-    startDoom();
+    initDoom();
 
-    // input
-    this.keyDown = function onKeyDown(keyCode) {
-      sendBrowserEvent(KeyEvent.KeyDown, keyCode);
-    };
-    this.keyUp = function onKeyUp(keyCode) {
-      sendBrowserEvent(KeyEvent.KeyUp, keyCode);
-    };
+    // attach inputs
+    this.sendKeyDown = (keyCode) => sendDoomKey(KeyEvent.KeyDown, keyCode);
+    this.sendKeyUp = (keyCode) => sendDoomKey(KeyEvent.KeyUp, keyCode);
 
     // Main game loop
     const step = async (): Promise<void> => {
       const frameIn = performance.now();
 
-      nextDoomStep();
+      stepDoom();
       await this.onStep();
 
       const timeToWait = (1000 / this.framesPerSecond) - (performance.now() - frameIn);

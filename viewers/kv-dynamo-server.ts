@@ -62,9 +62,9 @@ async function main() {
     keys.forEach((k) => {
       const key = KeyCodes[k.keyCode];
       if (k.event === KeyEvent.KeyDown) {
-        doom.keyDown(key);
+        doom.sendKeyDown(key);
       } else {
-        doom.keyUp(key);
+        doom.sendKeyUp(key);
       }
     });
   };

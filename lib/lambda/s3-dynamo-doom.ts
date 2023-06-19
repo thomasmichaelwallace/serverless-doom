@@ -68,9 +68,9 @@ export const handler : Handler = async (_, context) => {
     keys.forEach((k) => {
       const key = KeyCodes[k.keyCode];
       if (k.event === KeyEvent.KeyDown) {
-        doom.keyDown(key);
+        doom.sendKeyDown(key);
       } else {
-        doom.keyUp(key);
+        doom.sendKeyUp(key);
       }
     });
     const png = await doom.screen.getBufferAsync('image/png');

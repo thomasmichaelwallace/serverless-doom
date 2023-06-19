@@ -135,9 +135,9 @@ async function main() {
 
     const code = KeyCodes[key.keyCode];
     if (key.event === KeyEvent.KeyDown) {
-      doom.keyDown(code);
+      doom.sendKeyDown(code);
     } else {
-      doom.keyUp(code);
+      doom.sendKeyUp(code);
     }
   };
 
