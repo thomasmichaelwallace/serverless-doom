@@ -1,13 +1,8 @@
 /* eslint-disable no-console */
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import chromium from '@sparticuz/chromium';
 import { Handler } from 'aws-lambda';
-import puppeteer, { Page } from 'puppeteer-core';
+import puppeteer from 'puppeteer-core';
 import localFileServer from '../common/localFileServer';
-
-console.log('imported');
-
-const s3 = new S3Client({});
 
 const delay = (ms: number) => new Promise((resolve) => { setTimeout(resolve, ms); });
 
@@ -17,22 +12,6 @@ const JSON_CREDENTIALS = {
   sessionToken: process.env.AWS_SESSION_TOKEN,
 };
 const SERVER_BASE = './dist';
-
-let photoCount = 0;
-async function postPhoto(page: Page) {
-  const image = await page.screenshot();
-  photoCount += 1;
-  const Key = `${process.env.DOOM_PHOTO_KEY || 'ss'}-${photoCount}.png`;
-  const command = new PutObjectCommand({
-    Bucket: process.env.DOOM_BUCKET_NAME,
-    Key,
-    Body: image,
-  });
-  console.log('postPhoto', Key);
-  await s3.send(command);
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  setTimeout(() => postPhoto(page), 2000);
-}
 
 type PuppetDoomOptions = {
   localDoomPage: string;
@@ -61,35 +40,6 @@ async function puppetDoom({
   const canvasSelector = `#${canvasId}`;
   await page.waitForSelector(canvasSelector);
   await page.click(canvasSelector); // start doom!
-  await postPhoto(page);
-
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  setTimeout(async () => {
-    console.log('[page] downloading for video');
-    await page.evaluate(() => {
-      const a = document.querySelector('#download-doom-video') as HTMLAnchorElement;
-      window.open(a.href);
-    });
-    const newTarget = await page.browserContext().waitForTarget(
-      (target) => target.url().startsWith('blob:'),
-    );
-    const newPage = await newTarget.page();
-    const blobUrl = newPage?.url() as string;
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises
-    page.once('response', async (response) => {
-      const video = await response.buffer();
-      const Key = `${process.env.DOOM_PHOTO_KEY || 'ss'}-video.mp4`;
-      const command = new PutObjectCommand({
-        Bucket: process.env.DOOM_BUCKET_NAME,
-        Key,
-        Body: video,
-      });
-      console.log('postPhoto', Key);
-      await s3.send(command);
-    });
-    await page.evaluate(async (url) => { await fetch(url); }, blobUrl);
-  }, 15 * 1000);
-
   return browser;
 }
 

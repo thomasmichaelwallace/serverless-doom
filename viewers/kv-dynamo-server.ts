@@ -292,33 +292,6 @@ async function startMaster(
   }
 }
 
-function saveMp4(s: number) {
-  const canvas = document.getElementById('doom-frame') as HTMLCanvasElement;
-  const stream = canvas.captureStream();
-  const chunks: Blob[] = [];
-
-  const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-  mediaRecorder.ondataavailable = (event) => {
-    chunks.push(event.data);
-  };
-  mediaRecorder.onstop = () => {
-    const blob = new Blob(chunks, { type: 'video/mp4' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.id = 'download-doom-video';
-    a.href = url;
-    a.download = 'my-video.mp4';
-    document.body.appendChild(a);
-    console.log('?', a.id, a.href);
-  };
-
-  mediaRecorder.start();
-
-  setTimeout(() => {
-    mediaRecorder.stop();
-  }, s * 1000);
-}
-
 async function main() {
   const canvas = document.getElementById('doom-frame') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
@@ -351,8 +324,6 @@ async function main() {
     height: Doom.DOOM_SCREEN_HEIGHT,
   };
   const awaitStream = startMaster(canvas, streamOptions);
-
-  saveMp4(10);
 
   return Promise.all([awaitDoom, awaitStream]);
 }
