@@ -53,7 +53,7 @@ export const handler : Handler = async (_, context) => {
     jsonCredentials: JSON_CREDENTIALS,
     serveDir: SERVER_BASE,
   });
-  const localDoomPage = `${url}/kv-doom-server.html`;
+  const localDoomPage = `${url}/kv-dynamo-server.html`;
   console.log('[chrome] spawning puppeteer');
   const doomOptions: PuppetDoomOptions = {
     localDoomPage,
