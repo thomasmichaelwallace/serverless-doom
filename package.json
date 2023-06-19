@@ -9,7 +9,7 @@
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk",
-    "serve": "esbuild --bundle ./viewers/kv-dynamo-main.ts --outfile=./viewers/kv-dynamo.js --servedir=./viewers --watch"
+    "start": "esbuild --bundle ./viewers/*.ts --outdir=./viewers --servedir=./viewers --watch --define:process.env.PACKAGE_VERSION=1"
   },
   "devDependencies": {
     "@types/jest": "^29.5.1",
@@ -38,6 +38,7 @@
     "aws-sdk": "^2.1390.0",
     "constructs": "^10.0.0",
     "jimp": "^0.22.8",
+    "puppeteer": "^20.5.0",
     "ws": "^8.13.0"
   }
 }
