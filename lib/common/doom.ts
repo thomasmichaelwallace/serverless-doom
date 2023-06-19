@@ -30,7 +30,7 @@ export default class Doom<T> {
 
   static DOOM_SCREEN_WIDTH = 320 * 2;
 
-  private memory: WebAssembly.Memory;
+  memory: WebAssembly.Memory;
 
   framesPerSecond = 25;
 

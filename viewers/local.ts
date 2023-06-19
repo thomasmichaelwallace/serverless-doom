@@ -29,17 +29,6 @@ async function main() {
 
   const doom = new Doom(ctx);
 
-  const saveGameButton = document.getElementById('doom-save') as HTMLAnchorElement;
-  saveGameButton.onclick = () => {
-    console.log('saving');
-    doom.saveGame();
-  };
-  const loadGameButton = document.getElementById('doom-load') as HTMLAnchorElement;
-  loadGameButton.onclick = () => {
-    console.log('loading');
-    doom.loadGame();
-  };
-
   const doDump = async () => {
     const dump = new Uint8Array(doom.memory.buffer, 0, doom.memory.buffer.byteLength);
     const code = await getSaveCode(dump);

@@ -53,7 +53,6 @@ async function decompressArrayBuffer(input: ArrayBuffer) {
   }
   const concatenated = new Uint8Array(totalSize);
   let offset = 0;
-  // eslint-disable-next-line no-restricted-syntax
   for (const array of output) {
     concatenated.set(array, offset);
     offset += array.byteLength;
