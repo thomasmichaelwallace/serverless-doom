@@ -1,19 +1,17 @@
-import { Duration, Stack, StackProps } from 'aws-cdk-lib';
-import * as sns from 'aws-cdk-lib/aws-sns';
-import * as subs from 'aws-cdk-lib/aws-sns-subscriptions';
-import * as sqs from 'aws-cdk-lib/aws-sqs';
+import { Stack, StackProps } from 'aws-cdk-lib';
+import { Runtime } from 'aws-cdk-lib/aws-lambda';
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 
 export default class ServerlessDoomStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    const queue = new sqs.Queue(this, 'ServerlessDoomQueue', {
-      visibilityTimeout: Duration.seconds(300),
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const handler = new NodejsFunction(this, 'HelloDoomHandler', {
+      entry: 'lib/lambda/hello-doom.ts',
+      handler: 'handler',
+      runtime: Runtime.NODEJS_18_X,
     });
-
-    const topic = new sns.Topic(this, 'ServerlessDoomTopic');
-
-    topic.addSubscription(new subs.SqsSubscription(queue));
   }
 }
