@@ -13,7 +13,9 @@ export default class ServerlessDoomStack extends Stack {
 
   s3DynamoDoomLambda: NodejsFunction;
 
-  kvDoomLambda: NodejsFunction;
+  kvDynamoDoomLambda: NodejsFunction;
+
+  kvIotDoomLambda: NodejsFunction;
 
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
@@ -58,26 +60,20 @@ export default class ServerlessDoomStack extends Stack {
       timeout: Duration.seconds(30),
       memorySize: 1024,
     });
-
     doomBucket.grantReadWrite(this.s3DynamoDoomLambda);
     doomKeyDb.grantReadWriteData(this.s3DynamoDoomLambda);
 
-    const kvDoomLambdaEnv = {
-      DOOM_BUCKET_NAME: doomBucket.bucketName,
-      DOOM_PHOTO_KEY: 'doom-screenshot.png',
-    };
-    this.kvDoomLambda = new NodejsFunction(this, 'KvDoomHandler', {
-      entry: 'lib/lambda/kv-doom.ts',
+    this.kvDynamoDoomLambda = new NodejsFunction(this, 'KvDynamoDoomHandler', {
+      entry: 'lib/lambda/kv-dynamo-doom.ts',
       handler: 'handler',
       runtime: Runtime.NODEJS_18_X,
-      timeout: Duration.seconds(30),
+      timeout: Duration.minutes(1),
       memorySize: 1024 * 3,
-      environment: kvDoomLambdaEnv,
       bundling: {
         nodeModules: ['@sparticuz/chromium', 'vm2'],
         commandHooks: {
           beforeBundling(): string[] {
-            return ['npm run build:kv']; // rebuild dist
+            return ['npm run build:kv-dynamo']; // rebuild dist
           },
           beforeInstall(): string[] {
             return [];
@@ -94,14 +90,52 @@ export default class ServerlessDoomStack extends Stack {
         },
       },
     });
-
-    this.kvDoomLambda.addToRolePolicy(new iam.PolicyStatement({
+    this.kvDynamoDoomLambda.addToRolePolicy(new iam.PolicyStatement({
       actions: ['kinesisvideo:*'],
       resources: [context.kinesisChannelArn],
       effect: iam.Effect.ALLOW,
       sid: 'KinesisVideoAccess',
     }));
-    doomBucket.grantReadWrite(this.kvDoomLambda);
-    doomKeyDb.grantReadWriteData(this.kvDoomLambda);
+    doomKeyDb.grantReadWriteData(this.kvDynamoDoomLambda);
+
+    this.kvIotDoomLambda = new NodejsFunction(this, 'kvIotDoomHandler', {
+      entry: 'lib/lambda/kv-iot-doom.ts',
+      handler: 'handler',
+      runtime: Runtime.NODEJS_18_X,
+      timeout: Duration.minutes(1),
+      memorySize: 1024 * 3,
+      bundling: {
+        nodeModules: ['@sparticuz/chromium', 'vm2'],
+        commandHooks: {
+          beforeBundling(): string[] {
+            return ['npm run build:kv-iot']; // rebuild dist
+          },
+          beforeInstall(): string[] {
+            return [];
+          },
+          afterBundling(inputDir: string, outputDir: string): string[] {
+            if (inputDir === '/asset-input') return [];
+            const localDist = path.join(inputDir, 'dist');
+            const bundleDist = path.join(outputDir, 'dist');
+            return [
+              `mkdir -p ${bundleDist}`,
+              `cp -r ${localDist} ${outputDir}`,
+            ];
+          },
+        },
+      },
+    });
+    this.kvIotDoomLambda.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['kinesisvideo:*'],
+      resources: [context.kinesisChannelArn],
+      effect: iam.Effect.ALLOW,
+      sid: 'KinesisVideoAccess',
+    }));
+    this.kvIotDoomLambda.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['iot:*'],
+      resources: ['*'],
+      effect: iam.Effect.ALLOW,
+      sid: 'IotAccess',
+    }));
   }
 }
