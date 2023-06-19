@@ -11,10 +11,14 @@ enum KeyEvent {
   KeyUp = 1,
 }
 
+const delay = (ms: number) => new Promise((resolve) => { setTimeout(resolve, ms); });
+
 export default class Doom {
   static DOOM_SCREEN_HEIGHT = 200 * 2;
 
   static DOOM_SCREEN_WIDTH = 320 * 2;
+
+  DOOM_FRAMES_PER_SECOND = 25;
 
   memory: WebAssembly.Memory;
 
@@ -25,6 +29,8 @@ export default class Doom {
   onStep: () => Promise<void>;
 
   screen: Jimp;
+
+  private startAwaitable: Promise<void> | undefined = undefined;
 
   constructor() {
     this.memory = new WebAssembly.Memory({ initial: 108 });
@@ -65,6 +71,12 @@ export default class Doom {
   async start(
     doomWasm: BufferSource,
   ) {
+    if (this.startAwaitable !== undefined) {
+      // eslint-disable-next-line no-console
+      console.warn('Doom already started');
+      return this.startAwaitable;
+    }
+
     const importObject = {
       js: {
         js_console_log: this.appendOutput('log'),
@@ -95,14 +107,24 @@ export default class Doom {
     };
 
     // Main game loop
-    const step = async () => {
+    const step = async (): Promise<void> => {
+      const frameIn = performance.now();
+
       nextDoomStep();
       await this.onStep();
-      setTimeout(() => { step().then(() => {}).catch(() => {}); }, 1000 / 25);
+
+      const timeToWait = (1000 / this.DOOM_FRAMES_PER_SECOND) - (performance.now() - frameIn);
+      if (timeToWait > 0) {
+        await delay(timeToWait);
+      } else {
+        // eslint-disable-next-line no-console
+        console.warn(`Frame took ${-timeToWait}ms too long`);
+      }
+
+      return step();
     };
-    await step();
-    return new Promise<void>((r) => {
-      setTimeout(() => { r(); }, 10_000);
-    });
+
+    this.startAwaitable = step();
+    return this.startAwaitable;
   }
 }
