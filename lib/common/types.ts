@@ -23,6 +23,11 @@ export type DoomKey = {
   keyCode: number,
 };
 
+export type DoomState = {
+  snapshot: string;
+  timestamp: number;
+};
+
 export type DoomWindow = {
-  savedState?: string,
+  savedState?: DoomState,
 };
