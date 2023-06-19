@@ -3,6 +3,8 @@ import { auth } from 'aws-crt/dist.browser/browser'; // eslint-disable-line impo
 import { iot, mqtt5 } from 'aws-iot-device-sdk-v2';
 import { AwsCredentials } from './types';
 
+const DEBUG_LOG = false;
+
 type IotClientParams = {
   credentials: AwsCredentials
   awsIotEndpoint: string,
@@ -23,7 +25,7 @@ export default class IotClient<T> {
     awsIotEndpoint,
     topic,
   }: IotClientParams) {
-    console.log('IotClient constructor');
+    console.log('[iot-client] starting');
 
     this.onMessage = () => Promise.resolve();
 
@@ -42,7 +44,7 @@ export default class IotClient<T> {
     this.client = new mqtt5.Mqtt5Client(builder.build());
 
     this.client.on('error', (error) => {
-      console.log(`Error event: ${error.toString()}`);
+      console.log(`[iot-client] error: ${error.toString()}`);
     });
 
     this.topic = topic;
@@ -53,7 +55,7 @@ export default class IotClient<T> {
 
     this.connected = new Promise<void>((resolve) => {
       this.client.on('connectionSuccess', () => {
-        console.log('Connection Success event');
+        console.log('[iot-client] connected');
         resolve();
       });
     });
@@ -66,16 +68,16 @@ export default class IotClient<T> {
         { qos: mqtt5.QoS.AtLeastOnce, topicFilter: this.topic },
       ],
     });
-    console.log(`Suback result: ${JSON.stringify(suback)}`);
+    if (DEBUG_LOG) console.log(`[iot-client] suback result: ${JSON.stringify(suback)}`);
 
     this.client.on('messageReceived', (eventData: mqtt5.MessageReceivedEvent) => {
-      console.log(`Message Received event: ${JSON.stringify(eventData.message)}`);
+      if (DEBUG_LOG) console.log(`[iot-client] message Received event: ${JSON.stringify(eventData.message)}`);
       if (eventData.message.payload) {
         const txt = (eventData.message.payload as Buffer).toString('utf8');
-        console.log(`  with payload: ${txt}`);
+        if (DEBUG_LOG) console.log(`[iot-client]  with payload: ${txt}`);
         const obj = JSON.parse(txt) as T;
         this.onMessage(obj).catch((err) => {
-          console.log('onMessage error', err);
+          console.log('[iot-client] on message error', err);
         });
       }
     });
@@ -86,12 +88,12 @@ export default class IotClient<T> {
   async publish(message: T): Promise<void> {
     if (!this.connected) await this.connect();
     const payload = JSON.stringify(message);
-    console.log(`Publishing message: ${payload}`);
+    if (DEBUG_LOG) console.log(`[iot-client] publishing message: ${payload}`);
     const puback = await this.client.publish({
       qos: mqtt5.QoS.AtLeastOnce,
       topicName: this.topic,
       payload,
     });
-    console.log(`Puback result: ${JSON.stringify(puback)}`);
+    if (DEBUG_LOG) console.log(`[iot-client] puback result: ${JSON.stringify(puback)}`);
   }
 }
