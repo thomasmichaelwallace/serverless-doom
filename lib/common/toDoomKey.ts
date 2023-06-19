@@ -13,6 +13,7 @@ export default function toDoomKey(event: KeyboardEvent, type: KeyEvent): DoomKey
     Control: 'Ctrl',
     ' ': 'Space',
     Alt: 'Alt',
+    Escape: 'Escape',
   };
   const keyCode = doomMap[event.key];
   if (!keyCode) return false;

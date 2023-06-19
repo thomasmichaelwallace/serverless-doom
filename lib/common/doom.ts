@@ -1,7 +1,10 @@
+/* eslint-disable no-console */
 type DoomExports = {
   main: () => void;
   add_browser_event: (eventType: 0 | 1, keyCode: number) => void;
   doom_loop_step: () => void;
+  doom_save: () => void;
+  doom_load: (len: number) => void;
 };
 
 export enum KeyEvent {
@@ -18,6 +21,7 @@ export enum KeyCodes {
   Ctrl = 0x80 + 0x1d,
   Space = 32,
   Alt = 0x80 + 0x38,
+  Escape = 27,
 }
 
 const delay = (ms: number) => new Promise((resolve) => { setTimeout(resolve, ms); });
@@ -41,6 +45,14 @@ export default class Doom<T> {
 
   updateScreen: (img: Uint8ClampedArray) => void;
 
+  // eslint-disable-next-line class-methods-use-this
+  saveGame: () => void = () => {};
+
+  // eslint-disable-next-line class-methods-use-this
+  loadGame: () => void = () => {};
+
+  private saveFile: Uint8Array | undefined = undefined;
+
   private startAwaitable: Promise<void> | undefined = undefined;
 
   constructor(screen: T) {
@@ -60,7 +72,6 @@ export default class Doom<T> {
     return (offset: number, length: number) => {
       const lines = this.readWasmString(offset, length).split('\n');
       lines.forEach((l) => {
-        // eslint-disable-next-line no-console
         console.log(`[${style}] ${l}`);
       });
     };
@@ -79,7 +90,6 @@ export default class Doom<T> {
     doomWasm: BufferSource,
   ) {
     if (this.startAwaitable !== undefined) {
-      // eslint-disable-next-line no-console
       console.warn('Doom already started');
       return this.startAwaitable;
     }
@@ -91,6 +101,23 @@ export default class Doom<T> {
         js_stderr: this.appendOutput('stderr'),
         js_milliseconds_since_start: () => performance.now(),
         js_draw_screen: (ptr: number) => this.drawCanvas(ptr),
+        js_put_file: (ptr: number, length: number) => {
+          console.log('put file', ptr, length, this.memory.buffer);
+          const bytes = new Uint8Array(this.memory.buffer, ptr, length).slice();
+          console.log('put file', bytes);
+          this.saveFile = bytes;
+          console.log('saved', length, this.saveFile);
+        },
+        js_write_file: (ptr: number) => {
+          if (this.saveFile === undefined) {
+            console.warn('No save file');
+            return;
+          }
+
+          const bytes = new Uint8Array(this.memory.buffer, ptr, this.saveFile.length);
+          bytes.set(this.saveFile);
+          console.log('loaded', this.saveFile.length, bytes);
+        },
       },
       env: { memory: this.memory },
     };
@@ -101,9 +128,23 @@ export default class Doom<T> {
       main: startDoom,
       add_browser_event: sendBrowserEvent,
       doom_loop_step: nextDoomStep,
+      doom_save: saveDoom,
+      doom_load: loadDoom,
     } = doom.instance.exports as DoomExports;
 
     startDoom();
+
+    // save and load
+    this.saveGame = () => saveDoom();
+    this.loadGame = () => {
+      if (this.saveFile === undefined) {
+        console.warn('No save file');
+        return;
+      }
+
+      console.log('loading', this.saveFile.length);
+      loadDoom(this.saveFile.length);
+    };
 
     // input
     this.keyDown = function onKeyDown(keyCode) {
@@ -124,7 +165,6 @@ export default class Doom<T> {
       if (timeToWait > 0) {
         await delay(timeToWait);
       } else {
-        // eslint-disable-next-line no-console
         console.warn(`Frame took ${-timeToWait}ms too long`);
       }
 
