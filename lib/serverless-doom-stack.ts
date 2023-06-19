@@ -57,7 +57,7 @@ export default class ServerlessDoomStack extends Stack {
       entry: 'lib/lambda/kv-iot-doom.ts',
       handler: 'handler',
       runtime: Runtime.NODEJS_18_X,
-      timeout: Duration.seconds(30),
+      timeout: Duration.minutes(1),
       environment: {
         DOOM_BUCKET_NAME: doomBucket.bucketName,
         DOOM_MAX_PLAYS: '3',
