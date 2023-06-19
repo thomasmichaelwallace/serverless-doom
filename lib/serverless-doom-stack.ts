@@ -10,6 +10,8 @@ export default class ServerlessDoomStack extends Stack {
 
   s3DynamoDoomLambda: NodejsFunction;
 
+  kvDoomLambda: NodejsFunction;
+
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
@@ -56,5 +58,16 @@ export default class ServerlessDoomStack extends Stack {
 
     doomBucket.grantReadWrite(this.s3DynamoDoomLambda);
     doomKeyDb.grantReadWriteData(this.s3DynamoDoomLambda);
+
+    this.kvDoomLambda = new NodejsFunction(this, 'KvDoomHandler', {
+      entry: 'lib/lambda/kv-doom.ts',
+      handler: 'handler',
+      runtime: Runtime.NODEJS_18_X,
+      timeout: Duration.seconds(30),
+      memorySize: 1024 * 3,
+      bundling: {
+        nodeModules: ['@sparticuz/chromium'],
+      },
+    });
   }
 }

@@ -1,18 +1,20 @@
 import * as KVSWebRTC from 'amazon-kinesis-video-streams-webrtc';
 import AWS from 'aws-sdk';
 import Doom from '../lib/lambda/doom';
-import jsonCredentials from '../tmp/credentials.json';
 // @ts-expect-error doomWasm is a string
 import doomWasmName from '../tmp/doom.wasm';
 
 /* eslint-disable no-console */
 // import Doom from '../lib/lambda/doom';
 
-type FormValues = {
-  region: string,
+type AwsCredentials = {
   accessKeyId: string,
   secretAccessKey: string,
   sessionToken?: string,
+};
+
+type FormValues = AwsCredentials & {
+  region: string,
   endpoint?: string,
   channelName: string,
   // ingestMedia: false,
@@ -315,6 +317,7 @@ async function main() {
   };
 
   const doomWasm = await fetch(doomWasmName as string).then((r) => r.arrayBuffer());
+  const jsonCredentials = await fetch('./credentials.json').then((r) => r.json() as unknown as AwsCredentials);
   const awaitDoom = doom.start(doomWasm as BufferSource);
 
   const streamOptions: FormValues = {
