@@ -1,5 +1,4 @@
 /* eslint-disable no-console */
-import WebRTC from '@cubicleai/wrtc';
 import * as KVSWebRTC from 'amazon-kinesis-video-streams-webrtc';
 import AWS from 'aws-sdk';
 import { readFileSync, writeFileSync } from 'fs';
@@ -234,10 +233,9 @@ async function startMaster(
           .getTracks()
           .forEach((track) => peerConnection.addTrack(track, master.localStream));
       } else {
-        /* eslint-disable */
 
         // TODO: connect to doom; find a js way to get a media source plugged in.
-
+        /*
         const i420Frame = {
           width: formValues.width,
           height: formValues.height,
@@ -248,11 +246,11 @@ async function startMaster(
         const mediaStream = new WebRTC.MediaStream([imagesTrack]);
 
         // on each frame
-        // const frame = context.getImageData(0, 0, width, height);
-        // WebRTC.nonstandard.rgbaToI420(frame, i420Frame);
-        // imagesSource.onFrame(i420Frame);
-        mediaStream.getTracks().forEach((track: MediaStreamTrack) => peerConnection.addTrack(track, mediaStream));
-        /* eslint-enable */
+        const frame = context.getImageData(0, 0, width, height);
+        WebRTC.nonstandard.rgbaToI420(frame, i420Frame);
+        imagesSource.onFrame(i420Frame);
+        mediaStream.getTracks().forEach((track) => peerConnection.addTrack(track, mediaStream));
+        */
       }
       await peerConnection.setRemoteDescription(offer);
 
@@ -314,7 +312,6 @@ const options: FormValues = {
 async function main() {
   console.log('[kinesis] connecting to master');
   await startMaster(options);
-  return;
   console.log('[doom] staring doom');
   const wasm = readFileSync('./tmp/doom.wasm');
   const doom = new Doom();
