@@ -222,7 +222,7 @@ export default async function startMaster(
 
     return master;
   } catch (e) {
-    console.error('[kvs] [MASTER] Encountered error starting:', e);
+    console.error('[kvs] [MASTER] Encountered error starting:', (e as Error).message, e);
     throw e;
   }
 }
