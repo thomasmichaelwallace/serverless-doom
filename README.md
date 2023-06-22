@@ -4,9 +4,9 @@ Proving that for AWS Serverless:
 
 Sure - You _Can_ Play Doom On It.
 
-## Setup
+## Setup
 
-### Local Configuration
+### Local Configuration
 
 Create a `tmp` folder in the root of the project.
 
@@ -76,14 +76,14 @@ Once you have done that, you can use:
 
 ## Running
 
-### Local
+### Local
 
 `npm run start` starts a local server on http://127.0.0.1:8000/
 
 * Open `s3-dynamo.html` to view the S3/DynamoDB implementation
 * Open `kv-iot.html` to view the Kinesis Video Streams/IoT Core implementation
 
-### AWS
+### AWS
 
 From the Lambda console you will have two functions named like:
   * `ServerlessDoomStack-s3DynamoDoomHandlerABCDEFGH123` - this is the S3/DynamoDB implementation
