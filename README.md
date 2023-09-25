@@ -29,7 +29,7 @@ This should be the `json` response from AWS STS' assume-role api.
 For example:
 
 ```bash
-`aws --profile [profile name] sts assume-role --role-arn=[local role arn]> ./tmp/credentials.json`
+aws --profile [profile name] sts assume-role --role-session-name=doom --role-arn=[local role arn] > ./tmp/credentials.json
 ```
 
 `context.json`
@@ -68,17 +68,18 @@ You will need to create the following resources:
  * Open the AWS IoT Core console to prompt AWS to create an IoT Core endpoint
 
 Once you have done that, you can use:
- * `npm run cdk bootstrap`
  * (ensure you have `context.json`, using the dummy values for unknown resources)
+ * `npm run cdk bootstrap`
  * `npm run cdk deploy`
  * (update the `context.json` file with the ARNs of the resources created by CDK)
  * `npm run cdk deploy` again
+ * upload the `doom.wasm` file to the S3 bucket created by CDK
 
 ## Running
 
 ### Local
 
-`npm run start` starts a local server on http://127.0.0.1:8000/
+`npm run start` starts a local server on http://localhost:8000/
 
 * Open `s3-dynamo.html` to view the S3/DynamoDB implementation
 * Open `kv-iot.html` to view the Kinesis Video Streams/IoT Core implementation

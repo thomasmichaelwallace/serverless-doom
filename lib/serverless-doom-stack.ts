@@ -64,7 +64,7 @@ export default class ServerlessDoomStack extends Stack {
         DOOM_STATE_KEY_PREFIX: 'doom-state-key',
       },
       // timeout: Duration.minutes(1),
-      memorySize: 1024 * 3,
+      memorySize: 3008,
       bundling: {
         nodeModules: ['@sparticuz/chromium', 'vm2'],
         commandHooks: {
